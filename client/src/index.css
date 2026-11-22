@@ -1,0 +1,39 @@
+@import 'tailwindcss';
+
+/* Design tokens: keep in sync with docs/Design.md */
+@theme {
+  --color-primary: #c2410c;
+  --color-primary-hover: #9a3412;
+  --color-primary-soft: #ffedd5;
+  --color-bg: #fffbf5;
+  --color-surface: #ffffff;
+  --color-border: #e7e5e4;
+  --color-text: #1c1917;
+  --color-text-muted: #57534e;
+  --color-success: #15803d;
+  --color-warning: #b45309;
+  --color-danger: #b91c1c;
+  --color-info: #1d4ed8;
+  --color-veg: #15803d;
+  --color-kitchen-bg: #0c0a09;
+  --color-kitchen-card: #1c1917;
+
+  --font-sans: 'Inter', 'Noto Sans Bengali', 'Noto Sans Devanagari', system-ui, sans-serif;
+  --radius-card: 0.75rem;
+
+  --text-display: 3rem;
+  --text-display--line-height: 1.1;
+  --text-h1: 1.75rem;
+  --text-h1--line-height: 1.25;
+  --text-h2: 1.375rem;
+  --text-h2--line-height: 1.3;
+}
+
+@layer base {
+  body {
+    @apply bg-bg font-sans text-text antialiased;
+    /* 18px base text on customer screens (Design.md, Typography) */
+    font-size: 1.125rem;
+    line-height: 1.5;
+  }
+}

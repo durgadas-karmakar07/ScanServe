@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Secrets: only .env.example files are committed
+.env
+.env.*
+!.env.example
+
+# Build output
+dist/
+build/
+coverage/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
