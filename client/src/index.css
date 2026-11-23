@@ -1,32 +1,36 @@
 @import 'tailwindcss';
 
-/* Design tokens: keep in sync with docs/Design.md */
+/* Design tokens ("chalkboard and marigold"): keep in sync with docs/Design.md */
 @theme {
-  --color-primary: #c2410c;
-  --color-primary-hover: #9a3412;
-  --color-primary-soft: #ffedd5;
-  --color-bg: #fffbf5;
+  --color-primary: #1d3b33;
+  --color-primary-hover: #142a24;
+  --color-primary-soft: #e1ece6;
+  --color-accent: #f2a20c;
+  --color-accent-hover: #d98c00;
+  --color-accent-soft: #fdf1d6;
+  --color-bg: #eef2ef;
   --color-surface: #ffffff;
-  --color-border: #e7e5e4;
-  --color-text: #1c1917;
-  --color-text-muted: #57534e;
-  --color-success: #15803d;
+  --color-border: #d6ddd8;
+  --color-text: #1e2622;
+  --color-text-muted: #56615b;
+  --color-success: #1e7f46;
   --color-warning: #b45309;
-  --color-danger: #b91c1c;
+  --color-danger: #c0392b;
   --color-info: #1d4ed8;
-  --color-veg: #15803d;
+  --color-veg: #1e7f46;
   --color-kitchen-bg: #0c0a09;
   --color-kitchen-card: #1c1917;
 
-  --font-sans: 'Inter', 'Noto Sans Bengali', 'Noto Sans Devanagari', system-ui, sans-serif;
-  --radius-card: 0.75rem;
+  --font-display: 'Baloo 2 Variable', 'Baloo 2', 'Noto Sans Devanagari', system-ui, sans-serif;
+  --font-sans: 'Hind', 'Noto Sans Bengali', 'Noto Sans Devanagari', system-ui, sans-serif;
+  --radius-card: 1rem;
 
   --text-display: 3rem;
-  --text-display--line-height: 1.1;
+  --text-display--line-height: 1.05;
   --text-h1: 1.75rem;
-  --text-h1--line-height: 1.25;
+  --text-h1--line-height: 1.2;
   --text-h2: 1.375rem;
-  --text-h2--line-height: 1.3;
+  --text-h2--line-height: 1.25;
 }
 
 @layer base {
@@ -35,6 +39,22 @@
     /* 18px base text on customer screens (Design.md, Typography) */
     font-size: 1.125rem;
     line-height: 1.5;
+  }
+
+  /* Baloo 2 for every heading: the café-board voice of the app */
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
   }
 }
 

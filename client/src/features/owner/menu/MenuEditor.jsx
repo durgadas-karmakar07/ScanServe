@@ -4,25 +4,16 @@ import { getMenu, updateMenuItem } from '../../../api/menu.js';
 import Alert from '../../../components/ui/Alert.jsx';
 import Button from '../../../components/ui/Button.jsx';
 import Card from '../../../components/ui/Card.jsx';
+import LinkButton from '../../../components/ui/LinkButton.jsx';
 import { useAuth } from '../../../hooks/useAuth.js';
 import { useToast } from '../../../hooks/useToast.js';
+import { groupByCategory } from '../../../lib/menu.js';
 import DeleteDishSheet from './DeleteDishSheet.jsx';
 import DishSheet from './DishSheet.jsx';
 import MenuItemRow from './MenuItemRow.jsx';
 
-// Dishes come sorted by the order they were added; categories appear in the order of their
-// first dish.
-function groupByCategory(items) {
-  const groups = new Map();
-  for (const item of items) {
-    if (!groups.has(item.category)) groups.set(item.category, []);
-    groups.get(item.category).push(item);
-  }
-  return [...groups.entries()];
-}
-
 export default function MenuEditor() {
-  const { withAuth } = useAuth();
+  const { restaurant, withAuth } = useAuth();
   const { showToast } = useToast();
   const [menu, setMenu] = useState({ status: 'loading', items: [], error: '' });
   const [attempt, setAttempt] = useState(0);
@@ -107,7 +98,14 @@ export default function MenuEditor() {
             </p>
           )}
         </div>
-        {menu.status === 'ready' && menu.items.length > 0 && addButton}
+        {menu.status === 'ready' && menu.items.length > 0 && (
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
+            <LinkButton href={`/m/${restaurant.slug}`} isExternal>
+              Preview
+            </LinkButton>
+            {addButton}
+          </div>
+        )}
       </div>
 
       {menu.status === 'loading' && (
@@ -139,7 +137,7 @@ export default function MenuEditor() {
 
       {groups.map(([category, items]) => (
         <Card key={category} className="flex flex-col">
-          <h2 className="text-h2 font-semibold">{category}</h2>
+          <h2 className="text-h2 font-semibold break-words">{category}</h2>
           <ul className="divide-y divide-border">
             {items.map((item) => (
               <MenuItemRow

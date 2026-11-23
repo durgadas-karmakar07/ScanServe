@@ -1,4 +1,5 @@
 import { Pencil, Trash2 } from 'lucide-react';
+import DishPhoto from '../../../components/DishPhoto.jsx';
 import Badge from '../../../components/ui/Badge.jsx';
 import Button from '../../../components/ui/Button.jsx';
 import Switch from '../../../components/ui/Switch.jsx';
@@ -9,18 +10,33 @@ export default function MenuItemRow({ item, isUpdating, onToggleAvailable, onEdi
   return (
     <li className="flex flex-col gap-3 py-4">
       <div className="flex items-start gap-3">
-        <span className="mt-1">
-          <VegMark isVeg={item.isVeg} />
-        </span>
+        <DishPhoto
+          name={item.name}
+          photoUrl={item.photoUrl}
+          isSoldOut={!item.isAvailable}
+          variant="thumb"
+        />
         <div className="flex min-w-0 flex-1 flex-col items-start gap-1">
-          <span
-            className={`font-semibold break-words ${item.isAvailable ? '' : 'text-text-muted'}`}
-          >
-            {item.name}
+          <span className="flex max-w-full items-start gap-2">
+            <span className="mt-1">
+              <VegMark isVeg={item.isVeg} />
+            </span>
+            <span
+              className={`min-w-0 font-semibold break-words ${item.isAvailable ? '' : 'text-text-muted'}`}
+            >
+              {item.name}
+            </span>
           </span>
+          {item.description && (
+            <span className="line-clamp-2 max-w-full text-sm break-words text-text-muted">
+              {item.description}
+            </span>
+          )}
           {!item.isAvailable && <Badge tone="neutral">Sold out</Badge>}
         </div>
-        <span className="font-semibold tabular-nums">{formatRupees(item.price)}</span>
+        <span className="font-display text-h2 leading-none font-bold tabular-nums">
+          {formatRupees(item.price)}
+        </span>
       </div>
       {/* Phones: switch on its own line, then Edit and Delete side by side. Wider: one line. */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">

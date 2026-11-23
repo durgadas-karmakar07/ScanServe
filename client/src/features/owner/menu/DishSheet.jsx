@@ -4,6 +4,7 @@ import { createMenuItem, updateMenuItem } from '../../../api/menu.js';
 import Alert from '../../../components/ui/Alert.jsx';
 import Button from '../../../components/ui/Button.jsx';
 import Input from '../../../components/ui/Input.jsx';
+import PhotoPicker from '../../../components/ui/PhotoPicker.jsx';
 import Sheet from '../../../components/ui/Sheet.jsx';
 import Switch from '../../../components/ui/Switch.jsx';
 import VegMark from '../../../components/ui/VegMark.jsx';
@@ -12,6 +13,7 @@ import { useFocusFirstError } from '../../../hooks/useFocusFirstError.js';
 
 const toForm = (dish) => ({
   name: dish?.name ?? '',
+  description: dish?.description ?? '',
   category: dish?.category ?? '',
   price: dish ? String(dish.price) : '',
   isVeg: dish?.isVeg ?? null,
@@ -23,10 +25,14 @@ const toForm = (dish) => ({
 export default function DishSheet({ dish, categories, onClose, onSaved }) {
   const { withAuth } = useAuth();
   const [form, setForm] = useState(() => toForm(dish));
+  // undefined = keep the current photo, null = remove it, { publicId, version } = new photo.
+  const [photo, setPhoto] = useState(undefined);
+  const [isPhotoUploading, setIsPhotoUploading] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
   const [formError, setFormError] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const { formRef, alertRef } = useFocusFirstError(formError);
+  const isBusy = isSaving || isPhotoUploading;
 
   const updateField = (event) => {
     const { name, value } = event.target;
@@ -41,6 +47,7 @@ export default function DishSheet({ dish, categories, onClose, onSaved }) {
     // An empty or non-numeric price is sent as null so the server explains what is missing.
     const price = form.price.trim() === '' ? null : Number(form.price);
     const body = { ...form, price: Number.isFinite(price) ? price : null };
+    if (photo !== undefined) body.photo = photo;
     try {
       const { item } = dish
         ? await withAuth(updateMenuItem, dish.id, body)
@@ -54,9 +61,19 @@ export default function DishSheet({ dish, categories, onClose, onSaved }) {
   };
 
   return (
-    <Sheet title={dish ? 'Edit dish' : 'Add a dish'} onClose={onClose} isBusy={isSaving}>
+    <Sheet title={dish ? 'Edit dish' : 'Add a dish'} onClose={onClose} isBusy={isBusy}>
       <form ref={formRef} className="flex flex-col gap-4" onSubmit={handleSubmit} noValidate>
         {formError && <Alert ref={alertRef}>{formError.message}</Alert>}
+        <PhotoPicker
+          kind="dish"
+          label="Photo"
+          hint="A clear photo from above sells best. JPG, PNG or WebP, up to 5 MB."
+          currentUrl={photo === null ? null : dish?.photoUrl}
+          onUploaded={setPhoto}
+          onRemove={() => setPhoto(null)}
+          onBusyChange={setIsPhotoUploading}
+        />
+        {fieldErrors.photo && <p className="text-sm text-danger">{fieldErrors.photo}</p>}
         <Input
           id="dish-name"
           name="name"
@@ -66,6 +83,16 @@ export default function DishSheet({ dish, categories, onClose, onSaved }) {
           value={form.name}
           onChange={updateField}
           error={fieldErrors.name}
+        />
+        <Input
+          id="dish-description"
+          name="description"
+          label="Short description (optional)"
+          hint="One line, for example: With green chutney"
+          maxLength={120}
+          value={form.description}
+          onChange={updateField}
+          error={fieldErrors.description}
         />
         <Input
           id="dish-category"
@@ -133,7 +160,7 @@ export default function DishSheet({ dish, categories, onClose, onSaved }) {
           onChange={(isAvailable) => setForm((current) => ({ ...current, isAvailable }))}
         />
         <div className="flex flex-col gap-2 sm:flex-row-reverse">
-          <Button type="submit" disabled={isSaving}>
+          <Button type="submit" disabled={isBusy}>
             {isSaving ? (
               <LoaderCircle size={24} className="animate-spin" aria-hidden="true" />
             ) : (
@@ -141,7 +168,7 @@ export default function DishSheet({ dish, categories, onClose, onSaved }) {
             )}
             {isSaving ? 'Saving…' : 'Save dish'}
           </Button>
-          <Button variant="secondary" onClick={onClose} disabled={isSaving}>
+          <Button variant="secondary" onClick={onClose} disabled={isBusy}>
             Cancel
           </Button>
         </div>

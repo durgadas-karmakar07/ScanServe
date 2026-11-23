@@ -5,6 +5,7 @@ import { getHealth } from '../../api/health.js';
 import Badge from '../../components/ui/Badge.jsx';
 import Button from '../../components/ui/Button.jsx';
 import Card from '../../components/ui/Card.jsx';
+import Wordmark from '../../components/Wordmark.jsx';
 
 const STATUS_VIEW = {
   loading: {
@@ -61,10 +62,12 @@ export default function HealthPage() {
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col gap-6 px-4 py-10">
-      <header className="flex flex-col gap-1">
-        <p className="text-sm font-semibold tracking-wide text-primary uppercase">Setup check</p>
-        <h1 className="text-h1 font-bold">ScanServe</h1>
-        <p className="text-text-muted">This page checks that the app can talk to the server.</p>
+      <header className="flex flex-col gap-4">
+        <Wordmark size="lg" />
+        <div className="flex flex-col gap-1">
+          <h1 className="text-h1 font-bold">Setup check</h1>
+          <p className="text-text-muted">This page checks that the app can talk to the server.</p>
+        </div>
       </header>
 
       <Card className="flex flex-col gap-4">

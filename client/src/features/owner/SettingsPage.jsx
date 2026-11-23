@@ -9,18 +9,25 @@ import Switch from '../../components/ui/Switch.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useFocusFirstError } from '../../hooks/useFocusFirstError.js';
 import { useToast } from '../../hooks/useToast.js';
+import BrandingCard from './BrandingCard.jsx';
+
+const toForm = (restaurant) => ({
+  name: restaurant.name,
+  tagline: restaurant.tagline ?? '',
+  upiId: restaurant.upiId,
+});
 
 export default function SettingsPage() {
   const { staff, restaurant, withAuth, setRestaurant } = useAuth();
   const { showToast } = useToast();
-  const [form, setForm] = useState({ name: restaurant.name, upiId: restaurant.upiId });
+  const [form, setForm] = useState(() => toForm(restaurant));
   const [fieldErrors, setFieldErrors] = useState({});
   const [formError, setFormError] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isTogglingOrders, setIsTogglingOrders] = useState(false);
   const { formRef, alertRef } = useFocusFirstError(formError);
 
-  const isChanged = form.name !== restaurant.name || form.upiId !== restaurant.upiId;
+  const isChanged = Object.entries(form).some(([key, value]) => value !== (restaurant[key] ?? ''));
   const menuLink = `${window.location.host}/m/${restaurant.slug}`;
 
   const updateField = (event) => {
@@ -36,7 +43,7 @@ export default function SettingsPage() {
     try {
       const { restaurant: saved } = await withAuth(updateRestaurant, form);
       setRestaurant(saved);
-      setForm({ name: saved.name, upiId: saved.upiId });
+      setForm(toForm(saved));
       showToast('Café details saved');
     } catch (err) {
       setFieldErrors(err.fields ?? {});
@@ -92,6 +99,16 @@ export default function SettingsPage() {
             error={fieldErrors.name}
           />
           <Input
+            id="settings-tagline"
+            name="tagline"
+            label="One line about your café (optional)"
+            hint="Shown under your name, e.g. Home-style Bengali food"
+            maxLength={80}
+            value={form.tagline}
+            onChange={updateField}
+            error={fieldErrors.tagline}
+          />
+          <Input
             id="settings-upi"
             name="upiId"
             label="UPI ID for payments"
@@ -113,6 +130,8 @@ export default function SettingsPage() {
           </Button>
         </form>
       </Card>
+
+      <BrandingCard />
 
       <Card className="flex flex-col gap-3">
         <h2 className="text-h2 font-semibold">Menu link</h2>
