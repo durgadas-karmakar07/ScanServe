@@ -25,6 +25,8 @@ In a small café with two or three people, the owner usually cooks, takes orders
 
 It is built for real tiny cafés, starting with one in Durgapur, West Bengal.
 
+**Live:** [scanserve-cafe.netlify.app](https://scanserve-cafe.netlify.app). Work in progress: for now it shows a setup check that confirms the app can reach the API. The free API server sleeps when idle, so the first visit can take up to a minute.
+
 ## Features
 
 | Feature | Phase | Status |

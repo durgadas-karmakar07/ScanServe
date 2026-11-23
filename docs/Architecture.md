@@ -187,4 +187,4 @@ VITE_API_URL=http://localhost:5000
 | Service | URL |
 |---|---|
 | API (Render, Singapore, free) | `https://scanserve-api-xuy5.onrender.com` |
-| Web app (Netlify) | set after the Netlify site is created |
+| Web app (Netlify, public) | `https://scanserve-cafe.netlify.app` |
