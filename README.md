@@ -25,13 +25,13 @@ In a small café with two or three people, the owner usually cooks, takes orders
 
 It is built for real tiny cafés, starting with one in Durgapur, West Bengal.
 
-**Live:** [scanserve-cafe.netlify.app](https://scanserve-cafe.netlify.app). Work in progress: for now it shows a setup check that confirms the app can reach the API. The free API server sleeps when idle, so the first visit can take up to a minute.
+**Live:** [scanserve-cafe.netlify.app](https://scanserve-cafe.netlify.app). Work in progress: café owners can create an account and log in; the menu comes next. `/health` shows a setup check. The free API server sleeps when idle, so the first visit can take up to a minute.
 
 ## Features
 
 | Feature | Phase | Status |
 |---|---|---|
-| Owner account and café setup (name, URL, UPI ID) | 1 | Planned |
+| Owner account and café setup (name, URL, UPI ID) | 1 | Done |
 | Menu management with categories, veg tag and sold-out switch | 1 | Planned |
 | Printable QR poster for the menu board | 1 | Planned |
 | Customer ordering with no login: name asked once, remembered on the phone | 1 | Planned |

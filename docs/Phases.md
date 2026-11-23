@@ -25,10 +25,10 @@ Build in this order. Each step should run in the browser before moving on.
 - [x] `.env.example` files, `.gitignore` (`node_modules`, `.env`)
 
 ### 1.2 Owner account
-- [ ] `Restaurant` and `Staff` models
-- [ ] Register (café name, slug, UPI ID, owner name, email, password) and login → JWT
-- [ ] `requireAuth` middleware; `GET /api/auth/me`
-- [ ] Client: `/owner/register`, `/owner/login`, `AuthContext`, protected `/owner` route
+- [x] `Restaurant` and `Staff` models
+- [x] Register (café name, slug, UPI ID, owner name, email, password) and login → JWT
+- [x] `requireAuth` middleware; `GET /api/auth/me`
+- [x] Client: `/owner/register`, `/owner/login`, `AuthContext`, protected `/owner` route
 
 ### 1.3 Menu
 - [ ] `MenuItem` model and owner CRUD API

@@ -47,16 +47,18 @@ scanserve/
 │       ├── main.jsx
 │       ├── App.jsx            # routes
 │       ├── index.css          # Tailwind import + @theme tokens (see Design.md)
-│       ├── api/               # client.js (fetch wrapper), menu.js, orders.js, auth.js
-│       ├── components/ui/     # Button, Card, Badge, Input, Sheet, Toast
-│       ├── context/           # AuthContext.jsx, CartContext.jsx
-│       ├── hooks/             # useDevice.js, useSocket.js, useAuth.js
-│       ├── lib/               # format.js (₹), upi.js (build UPI link)
+│       ├── api/               # client.js (fetch wrapper), auth.js, health.js, menu.js, orders.js
+│       ├── components/        # RequireAuth.jsx (guards owner routes)
+│       ├── components/ui/     # Button, Card, Badge, Input, Alert, Sheet, Toast
+│       ├── context/           # authContext.js + AuthProvider.jsx, CartContext.jsx
+│       ├── hooks/             # useAuth.js, useDevice.js, useSocket.js
+│       ├── lib/               # format.js (₹), upi.js (UPI link), slug.js, tokenStorage.js
 │       └── features/
+│           ├── common/        # NotFoundPage
 │           ├── health/        # HealthPage (setup check, step 1.1)
 │           ├── customer/      # MenuPage, CartBar, OrderStatusPage, PayPanel
 │           ├── kitchen/       # KitchenPage, OrderCard
-│           └── owner/         # RegisterPage, LoginPage, DashboardPage,
+│           └── owner/         # AuthLayout, RegisterPage, LoginPage, DashboardPage,
 │                              # MenuEditor, UnpaidList, QrPoster, SettingsPage
 └── server/
     ├── .env.example
@@ -67,18 +69,20 @@ scanserve/
         ├── models/            # Restaurant, Staff, MenuItem, Device, Order, DailyCounter
         ├── routes/            # health, auth, public, menu, orders, restaurant (*.routes.js)
         ├── controllers/       # one file per route group
-        ├── services/          # order.service.js, counter.service.js
+        ├── services/          # auth.service.js, order.service.js, counter.service.js
         ├── middleware/        # requireAuth.js, requireDevice.js, validate.js, errorHandler.js,
-        │                      # rateLimit.js
-        ├── validators/        # zod schemas
+        │                      # rateLimit.js (apiLimiter, authLimiter)
+        ├── validators/        # zod schemas: common.js, auth.validators.js, ...
         ├── socket/            # index.js (auth, rooms), emit.js (helpers)
-        └── utils/             # AppError.js
+        └── utils/             # AppError.js, token.js (sign / verify JWT)
 ```
 
 ## 4. Client routes
 
 | Route | Screen | Who |
 |---|---|---|
+| `/` | Redirects to `/owner` (which sends logged-out visitors to `/owner/login`) | Anyone |
+| `/health` | Setup check: can the app reach the API? | Anyone |
 | `/m/:slug` | Menu + cart | Customer |
 | `/m/:slug/order/:orderId` | Order status + pay | Customer |
 | `/owner/register`, `/owner/login` | Create café / log in | Owner |
@@ -104,18 +108,28 @@ Order       {
 DailyCounter { restaurantId, date: 'YYYY-MM-DD', lastNumber }   // unique (restaurantId, date)
 ```
 
-**Indexes:** `Restaurant.slug` unique, `Staff.email` unique, `Device.deviceId` unique, `DailyCounter (restaurantId, date)` unique, `Order (restaurantId, status)`, `Order (deviceId, createdAt)`.
+**Indexes:** `Restaurant.slug` unique, `Staff.email` unique, `Staff.restaurantId`, `Device.deviceId` unique, `DailyCounter (restaurantId, date)` unique, `Order (restaurantId, status)`, `Order (deviceId, createdAt)`.
 
 **Order number:** `DailyCounter.findOneAndUpdate({ restaurantId, date }, { $inc: { lastNumber: 1 } }, { upsert: true, new: true })`. Business date uses the `Asia/Kolkata` time zone.
 
 ## 6. REST API
 
-All responses are JSON. Errors: `{ "error": { "code": "ORDER_NOT_FOUND", "message": "..." } }`.
+All responses are JSON. Errors: `{ "error": { "code": "ORDER_NOT_FOUND", "message": "..." } }`. Form errors add `fields`, one message per field: `{ "error": { "code": "VALIDATION_ERROR", "message": "Please check the highlighted fields.", "fields": { "upiId": "Enter a valid UPI ID, e.g. royalcafe@okaxis" } } }`.
+
+**Auth endpoints (step 1.2)**
+
+| Endpoint | Body | Success | Errors |
+|---|---|---|---|
+| `POST /api/auth/register` | `{ restaurantName, slug, upiId, ownerName, email, password }` | `201 { token, staff, restaurant }` | `400 VALIDATION_ERROR`, `400 INVALID_CREDENTIALS` (email taken: same message as a wrong password), `409 SLUG_TAKEN`, `429 RATE_LIMITED` |
+| `POST /api/auth/login` | `{ email, password }` | `200 { token, staff, restaurant }` | `400 VALIDATION_ERROR`, `401 INVALID_CREDENTIALS`, `429 RATE_LIMITED` |
+| `GET /api/auth/me` | — (`Authorization: Bearer <token>`) | `200 { staff, restaurant }` | `401 UNAUTHORIZED` |
+
+`staff` = `{ id, name, email, role }`; `restaurant` = `{ id, name, slug, upiId, isAcceptingOrders }`. Password hashes and `tokenVersion` never leave the server. Rate limits on these routes: 5 failed attempts per IP + email and 30 failed attempts per IP per 15 minutes (login and register together), and 5 successful sign-ups per IP per hour.
 
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
 | GET | `/api/health` | — | Health check → `{ ok: true }` |
-| POST | `/api/auth/register` | — | Create restaurant + owner, return JWT |
+| POST | `/api/auth/register` | — (rate-limited) | Create restaurant + owner, return JWT |
 | POST | `/api/auth/login` | — (rate-limited) | Email + password → JWT |
 | GET | `/api/auth/me` | Owner | Current owner + restaurant |
 | PATCH | `/api/restaurant` | Owner | Name, UPI ID, accepting orders on/off |

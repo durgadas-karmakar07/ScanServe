@@ -68,7 +68,7 @@ Security is a hard requirement from Phase 1, not a later phase. Every change mus
 - `JWT_SECRET` is at least 32 random characters. Tokens expire in 7 days and carry only `staffId`, `restaurantId`, `role` and `tokenVersion`.
 - `Staff.tokenVersion` is checked on every request. Changing the password or "log out everywhere" increments it, which kills all old tokens.
 - Login and register errors never reveal which field was wrong: always "Invalid email or password".
-- Rate limits: login/register 5 attempts per 15 minutes per IP + email; order creation 10 per minute per device and per IP; everything else 300 per 15 minutes per IP. Set `app.set('trust proxy', 1)` on Render so limits see the real IP.
+- Rate limits: login/register 5 failed attempts per 15 minutes per IP + email, plus per IP: 30 failed login/register attempts per 15 minutes and 5 new cafés per hour; order creation 10 per minute per device and per IP; everything else 300 per 15 minutes per IP. Set `app.set('trust proxy', 1)` on Render so limits see the real IP.
 - Token storage: the JWT is kept in `localStorage` and sent as `Authorization: Bearer`. This is an accepted trade-off because the frontend and API are on different domains; the XSS rules below are what keep it safe. If the app gets its own domain later, switch to an httpOnly, Secure, SameSite cookie.
 
 **Authorization**
