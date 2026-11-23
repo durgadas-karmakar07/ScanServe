@@ -25,7 +25,7 @@ In a small café with two or three people, the owner usually cooks, takes orders
 
 It is built for real tiny cafés, starting with one in Durgapur, West Bengal.
 
-**Live:** [scanserve-cafe.netlify.app](https://scanserve-cafe.netlify.app). Work in progress: café owners can create an account, build their menu (categories, veg tag, sold-out switch) and print a QR poster; the customer menu page comes next. `/health` shows a setup check. The free API server sleeps when idle, so the first visit can take up to a minute.
+**Live:** [scanserve-cafe.netlify.app](https://scanserve-cafe.netlify.app). Work in progress: café owners can create an account, build their menu and print a QR poster, and customers can open the menu from the QR (photos, categories, cart); placing orders comes next. `/health` shows a setup check. The free API server sleeps when idle, so the first visit can take up to a minute.
 
 ## Features
 
@@ -34,6 +34,8 @@ It is built for real tiny cafés, starting with one in Durgapur, West Bengal.
 | Owner account and café setup (name, URL, UPI ID) | 1 | Done |
 | Menu management with categories, veg tag and sold-out switch | 1 | Done |
 | Printable QR poster for the menu board | 1 | Done |
+| Customer menu from the QR: café cover and logo, category tabs, dish cards, cart | 1 | Done |
+| Dish photos, café cover photo and logo (Cloudinary) | 1 | In progress: built, live once the Cloudinary keys are set |
 | Customer ordering with no login: name asked once, remembered on the phone | 1 | Planned |
 | Daily order numbers (1, 2, 3...) | 1 | Planned |
 | Live kitchen screen with one-tap **Ready** and **Cancel** | 1 | Planned |
@@ -74,6 +76,8 @@ flowchart LR
 | Backend | Node.js 20+, Express 5 |
 | Database | MongoDB Atlas, Mongoose |
 | Validation and security | zod, bcryptjs, JSON Web Tokens, helmet, express-rate-limit |
+| Photos | Cloudinary (signed uploads straight from the browser) |
+| Design | Baloo 2 and Hind fonts, "chalkboard and marigold" palette ([docs/Design.md](docs/Design.md)) |
 | Hosting | Netlify (frontend), Render (backend) |
 
 ## Architecture
@@ -141,6 +145,7 @@ npm run dev             # http://localhost:5173
 | `JWT_SECRET` | Long random string (at least 32 characters) |
 | `CLIENT_ORIGIN` | Frontend URL allowed by CORS, e.g. `http://localhost:5173` |
 | `TZ_BUSINESS` | Time zone for daily order numbers: `Asia/Kolkata` |
+| `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | Optional, all three or none: from the Cloudinary dashboard, for photo uploads |
 
 **client/.env**
 

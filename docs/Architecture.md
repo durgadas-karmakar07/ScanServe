@@ -27,8 +27,8 @@ An order that is `ready` but not `paid` appears in the owner's unpaid list.
 | Layer | Choice |
 |---|---|
 | Language | JavaScript (ES modules everywhere, `"type": "module"`) |
-| Frontend | React 19 + Vite, React Router, Tailwind CSS v4 (`@tailwindcss/vite`), `socket.io-client`, `lucide-react` icons, `qrcode` |
-| Backend | Node.js 20+, Express 5, Mongoose, Socket.io, `zod`, `jsonwebtoken`, `bcryptjs`, `helmet`, `cors`, `express-rate-limit`, `dotenv` |
+| Frontend | React 19 + Vite, React Router, Tailwind CSS v4 (`@tailwindcss/vite`), `socket.io-client`, `lucide-react` icons, `qrcode`, fonts Baloo 2 + Hind via `@fontsource` |
+| Backend | Node.js 20+, Express 5, Mongoose, Socket.io, `zod`, `jsonwebtoken`, `bcryptjs`, `helmet`, `cors`, `express-rate-limit`, `dotenv`; photos on Cloudinary (signed browser uploads, no SDK) |
 | Database | MongoDB Atlas (free tier) |
 | Hosting | Frontend on Netlify, backend on Render (keeps a server running for Socket.io) |
 | Dev tools | `nodemon` (server), ESLint + Prettier, optional Vitest + Supertest |
@@ -49,20 +49,23 @@ scanserve/
 │       ├── index.css          # Tailwind import + @theme tokens (see Design.md)
 │       ├── api/               # client.js (fetch wrapper), auth.js, health.js, menu.js,
 │       │                      # restaurant.js, orders.js
-│       ├── components/        # RequireAuth.jsx (guards owner routes)
-│       ├── components/ui/     # Button, Card, Badge, Input, Alert, Switch, VegMark, Sheet
+│       ├── components/        # RequireAuth.jsx (guards owner routes), Wordmark, DishPhoto
+│       ├── components/ui/     # Button, LinkButton, Card, Badge, Input, Alert, Switch, VegMark,
+│       │                      # Sheet, PhotoPicker, QuantityStepper
 │       ├── context/           # authContext.js + AuthProvider.jsx, toastContext.js +
-│       │                      # ToastProvider.jsx (the toast), CartContext.jsx
+│       │                      # ToastProvider.jsx (the toast), cartContext.js + CartProvider.jsx
 │       ├── hooks/             # useAuth.js, useToast.js, useFocusFirstError.js, useDevice.js,
-│       │                      # useSocket.js
-│       ├── lib/               # format.js (₹), upi.js (UPI link), slug.js, tokenStorage.js
+│       │                      # useCart.js, useActiveSection.js (scroll spy), useSocket.js
+│       ├── lib/               # format.js (₹), upi.js (UPI link), slug.js, tokenStorage.js,
+│       │                      # cartStorage.js, menu.js (group by category)
 │       └── features/
 │           ├── common/        # NotFoundPage
 │           ├── health/        # HealthPage (setup check, step 1.1)
-│           ├── customer/      # MenuPage, CartBar, OrderStatusPage, PayPanel
+│           ├── customer/      # MenuPage, CustomerMenu, MenuHero, CategoryTabs, DishCard,
+│           │                  # OrderSummary, CartBar, OrderStatusPage, PayPanel
 │           ├── kitchen/       # KitchenPage, OrderCard
 │           └── owner/         # AuthLayout, RegisterPage, LoginPage, OwnerLayout (tabs),
-│               │              # QrPoster, SettingsPage, UnpaidList
+│               │              # QrPoster, SettingsPage, BrandingCard, UnpaidList
 │               └── menu/      # MenuEditor, MenuItemRow, DishSheet, DeleteDishSheet
 └── server/
     ├── .env.example
@@ -70,16 +73,19 @@ scanserve/
         ├── server.js          # http server + Socket.io start
         ├── app.js             # express app, middleware, routes
         ├── config/            # env.js (validated env), db.js
-        ├── models/            # Restaurant, Staff, MenuItem, Device, Order, DailyCounter
-        ├── routes/            # health, auth, public, menu, orders, restaurant (*.routes.js)
+        ├── models/            # Restaurant, Staff, MenuItem, photoSchema, RateLimitCounter,
+        │                      # Device, Order, DailyCounter
+        ├── routes/            # health, auth, public, menu, uploads, orders, restaurant
         ├── controllers/       # one file per route group
-        ├── services/          # auth.service.js, order.service.js, counter.service.js
+        ├── services/          # auth.service.js, photo.service.js, order.service.js,
+        │                      # counter.service.js
         ├── middleware/        # requireAuth.js, requireDevice.js, validate.js, errorHandler.js,
-        │                      # rateLimit.js (apiLimiter, authLimiter)
+        │                      # rateLimit.js (API, auth and photo-upload limiters),
+        │                      # mongoRateLimitStore.js (limits that survive restarts)
         ├── validators/        # zod schemas: common.js (ids, names, UPI ID), auth, menu,
         │                      # restaurant (*.validators.js)
         ├── socket/            # index.js (auth, rooms), emit.js (helpers)
-        └── utils/             # AppError.js, token.js (sign / verify JWT)
+        └── utils/             # AppError.js, token.js (sign / verify JWT), cloudinary.js
 ```
 
 ## 4. Client routes
@@ -101,9 +107,10 @@ scanserve/
 ## 5. Database schema (MongoDB, Mongoose)
 
 ```js
-Restaurant  { name, slug (unique), upiId, isAcceptingOrders: true, createdAt }
+Restaurant  { name, slug (unique), tagline, upiId, isAcceptingOrders: true, coverPhoto, logo, createdAt }
 Staff       { restaurantId, name, email (unique), passwordHash (select: false), role: 'owner', tokenVersion: 0 }
-MenuItem    { restaurantId, name, category, price (integer ₹ 1–99999), isVeg, isAvailable: true, sortOrder, createdAt, updatedAt }
+MenuItem    { restaurantId, name, description, category, price (integer ₹ 1–99999), isVeg, isAvailable: true, photo, sortOrder, createdAt, updatedAt }
+Photo       { publicId, version }   // Cloudinary id in scanserve/<NODE_ENV>/<restaurantId>/<dish|cover|logo>/; URLs are built when sending
 Device      { deviceId (unique, UUID), name, firstSeenAt, lastSeenAt }
 Order       {
   restaurantId, deviceId, customerName, orderNumber, businessDate: 'YYYY-MM-DD',
@@ -115,9 +122,10 @@ Order       {
   createdAt, readyAt, paidAt, cancelledAt
 }
 DailyCounter { restaurantId, date: 'YYYY-MM-DD', lastNumber }   // unique (restaurantId, date)
+RateLimitCounter { _id: '<limit prefix><key>', hits, expiresAt }   // daily upload limits; TTL deletes it
 ```
 
-**Indexes:** `Restaurant.slug` unique, `Staff.email` unique, `Staff.restaurantId`, `MenuItem (restaurantId, sortOrder)`, `Device.deviceId` unique, `DailyCounter (restaurantId, date)` unique, `Order (restaurantId, status)`, `Order (deviceId, createdAt)`.
+**Indexes:** `Restaurant.slug` unique, `Staff.email` unique, `Staff.restaurantId`, `MenuItem (restaurantId, sortOrder)`, `Device.deviceId` unique, `DailyCounter (restaurantId, date)` unique, `Order (restaurantId, status)`, `Order (deviceId, createdAt)`, `RateLimitCounter.expiresAt` TTL (expire at that time).
 
 **Order number:** `DailyCounter.findOneAndUpdate({ restaurantId, date }, { $inc: { lastNumber: 1 } }, { upsert: true, new: true })`. Business date uses the `Asia/Kolkata` time zone.
 
@@ -140,12 +148,21 @@ All responses are JSON. Errors: `{ "error": { "code": "ORDER_NOT_FOUND", "messag
 | Endpoint | Body | Success | Errors |
 |---|---|---|---|
 | `GET /api/menu` | — | `200 { items }` sorted by `sortOrder` | `401` |
-| `POST /api/menu` | `{ name, category, price, isVeg, isAvailable? }` | `201 { item }` (server sets `sortOrder`) | `400 VALIDATION_ERROR`, `409 MENU_FULL` (200 dishes) |
-| `PATCH /api/menu/:id` | any of `{ name, category, price, isVeg, isAvailable }` | `200 { item }` | `400`, `404 MENU_ITEM_NOT_FOUND` |
+| `POST /api/menu` | `{ name, description?, category, price, isVeg, isAvailable?, photo? }` | `201 { item }` (server sets `sortOrder`) | `400 VALIDATION_ERROR`, `409 MENU_FULL` (200 dishes) |
+| `PATCH /api/menu/:id` | any of `{ name, description, category, price, isVeg, isAvailable, photo }` (`photo: null` removes it) | `200 { item }` | `400`, `404 MENU_ITEM_NOT_FOUND` |
 | `DELETE /api/menu/:id` | — | `204` | `400`, `404 MENU_ITEM_NOT_FOUND` |
-| `PATCH /api/restaurant` | any of `{ name, upiId, isAcceptingOrders }` (the slug cannot change) | `200 { restaurant }` | `400` |
+| `PATCH /api/restaurant` | any of `{ name, tagline, upiId, isAcceptingOrders, coverPhoto, logo }` (the slug cannot change) | `200 { restaurant }` | `400` |
 
-`item` = `{ id, name, category, price, isVeg, isAvailable, sortOrder }`. Names and categories are trimmed with repeated spaces collapsed; price is a whole number of rupees.
+`item` = `{ id, name, description, category, price, isVeg, isAvailable, photoUrl, sortOrder }`; the owner `restaurant` also has `tagline`, `coverUrl`, `logoUrl`. Names, descriptions and categories are trimmed with repeated spaces collapsed; price is a whole number of rupees. A `photo` is `{ publicId, version }` from the upload and must be in the café's own folder for that kind, else `400` with `fields.photo` / `fields.coverPhoto` / `fields.logo`. A replaced or removed photo is deleted from Cloudinary in the background.
+
+**Photos and the customer menu (redesign, 2026-11-23)**
+
+| Endpoint | Auth | Body | Success | Errors |
+|---|---|---|---|---|
+| `POST /api/uploads/signature` | Owner | `{ kind: 'dish' | 'cover' | 'logo' }` | `200 { cloudName, apiKey, signature, params }`; the browser posts the file with these to `https://api.cloudinary.com/v1_1/<cloud>/image/upload` | `400`, `401`, `429 RATE_LIMITED` (per café 60 an hour and 100 a day, per network 120 a day, 300 a day across all cafés; only signatures given out count; the daily counts live in MongoDB so a sleeping or restarted server does not reset them), `503 PHOTOS_NOT_CONFIGURED` |
+| `GET /api/public/:slug/menu` | — | — | `200 { restaurant: { name, slug, tagline, isAcceptingOrders, coverUrl, logoUrl }, items: [{ id, name, description, category, price, isVeg, isAvailable, photoUrl }] }` (sold-out dishes included; no UPI ID, no internal ids) | `400` bad slug, `404 RESTAURANT_NOT_FOUND` |
+
+Each signature is for exactly one photo. It covers `allowed_formats=jpg,jpeg,png,webp`, `overwrite=false`, `public_id=scanserve/<NODE_ENV>/<restaurantId>/<kind>/<random UUID>` (the server picks the id, so a reused signature can only send the same photo again), `timestamp` and `transformation=c_limit,w_1600,h_1600,q_auto:good` (on arrival every photo is shrunk to at most 1600px and compressed). The signature cannot fix which Cloudinary endpoint is used (image, video, raw, auto are in the URL, not signed), so the signed `allowed_formats` is what refuses other file types everywhere; there is deliberately no `format` param, because with it Cloudinary converts other types instead of refusing them. Known gap: a file with an image extension could be sent to the raw endpoint and stored untransformed (up to the plan's 10 MB); the upload limits cap this, and a later sweep of unused uploads will remove such files. The web app accepts only JPG, PNG and WebP up to 5 MB. Delivery URLs use `f_auto,q_auto` and one size per kind (dish 640×480, cover 1600×700, logo 256×256), which keeps bandwidth low on the free plan (25 credits a month; 1 credit = 1 GB stored or 1 GB delivered or 1,000 transformations).
 
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
@@ -197,7 +214,7 @@ The server assigns rooms from the verified JWT or device ID; clients cannot pick
 | Render | Backend + Socket.io hosting | 1 |
 | UPI deep link (`upi://pay?pa=&pn=&am=&cu=INR&tn=`) | Opens the customer's UPI app; not an API, no keys, no fees | 1 |
 | Web Speech API (`speechSynthesis`) | Voice in the kitchen (built into browsers) | 2 |
-| Cloudinary | Dish photos | 3 |
+| Cloudinary | Dish photos, café cover and logo (free plan; browser uploads straight to Cloudinary with a signature from our API) | 1 (moved up from 3) |
 | Web Push (`web-push`) | "Food is ready" notifications | 4 |
 
 No payment gateway. Money goes straight from the customer's UPI app to the café's UPI ID.
@@ -212,6 +229,9 @@ MONGODB_URI=
 JWT_SECRET=            # long random string
 CLIENT_ORIGIN=http://localhost:5173
 TZ_BUSINESS=Asia/Kolkata
+CLOUDINARY_CLOUD_NAME=   # optional, all three or none: photo upload is off without them
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
 
 # client/.env
 VITE_API_URL=http://localhost:5000

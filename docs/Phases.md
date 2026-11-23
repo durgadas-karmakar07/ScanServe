@@ -38,8 +38,8 @@ Build in this order. Each step should run in the browser before moving on.
 
 ### 1.4 Customer menu and device
 - [ ] `Device` model; `POST /api/devices`; `useDevice` hook saves `deviceId` and `name` in `localStorage`
-- [ ] `GET /api/public/:slug/menu`; customer menu page with category tabs, veg dot, sold-out greyed
-- [ ] Cart with a sticky bottom bar (`CartContext`), quantity +/−
+- [x] `GET /api/public/:slug/menu`; customer menu page with category tabs, veg dot, sold-out greyed (with the redesign: hero, photo cards)
+- [x] Cart with a sticky bottom bar (`CartContext`), quantity +/− (plus an order panel on desktop)
 
 ### 1.5 Orders
 - [ ] `Order` and `DailyCounter` models; `counter.service.js` (atomic `$inc`, Asia/Kolkata date)
@@ -94,7 +94,7 @@ Build in this order. Each step should run in the browser before moving on.
 - "Marked paid by customer" vs "confirmed by owner" shown separately
 - "Share today's hisab" to WhatsApp (`https://wa.me/?text=...`)
 - Owner quick-add with big dish buttons for spoken orders
-- Dish photos with Cloudinary; optional kitchen PIN for cooks
+- Dish photos with Cloudinary (done early, 2026-11-23, with café cover and logo); optional kitchen PIN for cooks
 
 **Done when:** the day's numbers on the hisab page match the orders in the database for a test day.
 
