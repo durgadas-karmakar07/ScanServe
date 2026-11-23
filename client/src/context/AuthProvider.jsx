@@ -61,9 +61,29 @@ export default function AuthProvider({ children }) {
     [],
   );
 
+  // Calls an owner API function with the current token: withAuth(getMenu) calls getMenu(token).
+  // A 401 means the token expired or was revoked, so the owner is sent back to the login page.
+  const withAuth = useCallback(
+    async (apiFn, ...args) => {
+      try {
+        return await apiFn(token, ...args);
+      } catch (err) {
+        if (err.status === 401) logout();
+        throw err;
+      }
+    },
+    [token, logout],
+  );
+
+  // Keeps the header and other pages in step after the owner edits the café settings.
+  const setRestaurant = useCallback(
+    (restaurant) => setSession((current) => ({ ...current, restaurant })),
+    [],
+  );
+
   const value = useMemo(
-    () => ({ ...session, login, register, logout, retry }),
-    [session, login, register, logout, retry],
+    () => ({ ...session, login, register, logout, retry, withAuth, setRestaurant }),
+    [session, login, register, logout, retry, withAuth, setRestaurant],
   );
 
   return <AuthContext value={value}>{children}</AuthContext>;

@@ -1,6 +1,7 @@
 const VARIANTS = {
   primary: 'bg-primary text-white hover:bg-primary-hover',
   secondary: 'border border-border bg-surface text-text hover:bg-bg',
+  danger: 'bg-danger text-white hover:bg-danger/90',
 };
 
 export default function Button({

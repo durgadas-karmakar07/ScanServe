@@ -37,3 +37,13 @@
     line-height: 1.5;
   }
 }
+
+/* QR poster: white page with a small margin; the screen-only parts use print:hidden */
+@media print {
+  @page {
+    margin: 12mm;
+  }
+  body {
+    background: #ffffff;
+  }
+}
