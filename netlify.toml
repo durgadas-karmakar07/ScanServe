@@ -1,0 +1,29 @@
+# Netlify builds and hosts only the React app in client/. The API runs on Render.
+
+[build]
+  base = "client"
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+  # Public value: VITE_* variables are built into the browser bundle, so never put secrets here.
+  VITE_API_URL = "https://scanserve-api-xuy5.onrender.com"
+
+# Single-page app: every path serves index.html so client-side routes work on refresh.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Security headers (Rules.md section 5). The build has no inline scripts or styles, so the
+# CSP can stay strict; connect-src allows only the API.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://scanserve-api-xuy5.onrender.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains"
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"

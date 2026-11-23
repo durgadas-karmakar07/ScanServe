@@ -62,7 +62,7 @@ Build in this order. Each step should run in the browser before moving on.
 - [ ] `order:paid` updates the kitchen and owner screens live
 
 ### 1.8 Deploy
-- [ ] Backend on Render, frontend on Vercel, env vars set, CORS correct
+- [ ] Backend on Render, frontend on Netlify, env vars set, CORS correct
 - [ ] Test on a real phone with the printed QR
 
 ### Phase 1 — Done when

@@ -40,7 +40,7 @@ const result = envSchema.safeParse(rawEnv);
 
 if (!result.success) {
   // Print only variable names and problems, never the values (they may be secrets).
-  console.error('Invalid environment variables in server/.env:');
+  console.error('Invalid environment variables (server/.env locally, or the host settings):');
   for (const issue of result.error.issues) {
     console.error(`  - ${issue.path.join('.')}: ${issue.message}`);
   }

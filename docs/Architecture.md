@@ -30,13 +30,14 @@ An order that is `ready` but not `paid` appears in the owner's unpaid list.
 | Frontend | React 19 + Vite, React Router, Tailwind CSS v4 (`@tailwindcss/vite`), `socket.io-client`, `lucide-react` icons, `qrcode` |
 | Backend | Node.js 20+, Express 5, Mongoose, Socket.io, `zod`, `jsonwebtoken`, `bcryptjs`, `helmet`, `cors`, `express-rate-limit`, `dotenv` |
 | Database | MongoDB Atlas (free tier) |
-| Hosting | Frontend on Vercel, backend on Render (keeps a server running for Socket.io) |
+| Hosting | Frontend on Netlify, backend on Render (keeps a server running for Socket.io) |
 | Dev tools | `nodemon` (server), ESLint + Prettier, optional Vitest + Supertest |
 
 ## 3. Folder structure
 
 ```
 scanserve/
+├── netlify.toml               # Netlify build (client/), API URL, security headers
 ├── docs/                      # these 6 files
 ├── client/
 │   ├── index.html
@@ -157,7 +158,7 @@ The server assigns rooms from the verified JWT or device ID; clients cannot pick
 | Service | Used for | Phase |
 |---|---|---|
 | MongoDB Atlas | Database | 1 |
-| Vercel | Frontend hosting | 1 |
+| Netlify | Frontend hosting (config in `netlify.toml`) | 1 |
 | Render | Backend + Socket.io hosting | 1 |
 | UPI deep link (`upi://pay?pa=&pn=&am=&cu=INR&tn=`) | Opens the customer's UPI app; not an API, no keys, no fees | 1 |
 | Web Speech API (`speechSynthesis`) | Voice in the kitchen (built into browsers) | 2 |
@@ -180,3 +181,10 @@ TZ_BUSINESS=Asia/Kolkata
 # client/.env
 VITE_API_URL=http://localhost:5000
 ```
+
+**Production:** the server variables are set in the Render dashboard (`NODE_ENV=production`, `CLIENT_ORIGIN` = the Netlify URL, `MONGODB_URI` for the `scanserve-prod` user and the `scanserve_prod` database, its own `JWT_SECRET`). `VITE_API_URL` for the live site is in `netlify.toml` (public value). Atlas allows only the home IP and Render's Singapore outbound ranges.
+
+| Service | URL |
+|---|---|
+| API (Render, Singapore, free) | `https://scanserve-api-xuy5.onrender.com` |
+| Web app (Netlify) | set after the Netlify site is created |

@@ -72,13 +72,13 @@ flowchart LR
 | Backend | Node.js 20+, Express 5 |
 | Database | MongoDB Atlas, Mongoose |
 | Validation and security | zod, bcryptjs, JSON Web Tokens, helmet, express-rate-limit |
-| Hosting | Vercel (frontend), Render (backend) |
+| Hosting | Netlify (frontend), Render (backend) |
 
 ## Architecture
 
 ```mermaid
 flowchart TB
-    subgraph Client["React app (Vercel)"]
+    subgraph Client["React app (Netlify)"]
         CU[Customer menu<br/>/m/:slug]
         KI[Kitchen screen<br/>/kitchen]
         OW[Owner panel<br/>/owner]

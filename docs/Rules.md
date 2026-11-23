@@ -90,7 +90,7 @@ Security is a hard requirement from Phase 1, not a later phase. Every change mus
 - Clients never change data over sockets. All changes go through REST, so validation, auth and rate limits always apply; sockets only broadcast.
 
 **HTTP and browser**
-- `helmet()` with a Content-Security-Policy and HSTS; HTTPS only in production (Render and Vercel provide it).
+- `helmet()` with a Content-Security-Policy and HSTS; HTTPS only in production (Render and Netlify provide it).
 - CORS allows exactly `CLIENT_ORIGIN`; never `*`.
 - React escapes output by default: never use `dangerouslySetInnerHTML`, `eval` or `new Function`. Links to other sites use `rel="noopener noreferrer"`.
 - Nothing secret goes in `VITE_*` variables; everything in the client bundle is public.
