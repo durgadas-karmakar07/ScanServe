@@ -35,7 +35,7 @@ It is built for real tiny cafés, starting with one in Durgapur, West Bengal.
 | Menu management with categories, veg tag and sold-out switch | 1 | Done |
 | Printable QR poster for the menu board | 1 | Done |
 | Customer menu from the QR: café cover and logo, category tabs, dish cards, cart | 1 | Done |
-| Dish photos, café cover photo and logo (Cloudinary) | 1 | In progress: built, live once the Cloudinary keys are set |
+| Dish photos, café cover photo and logo (Cloudinary) | 1 | Built and tested; live once the Cloudinary keys are set on the server |
 | Customer ordering with no login: name asked once, remembered on the phone | 1 | Planned |
 | Daily order numbers (1, 2, 3...) | 1 | Planned |
 | Live kitchen screen with one-tap **Ready** and **Cancel** | 1 | Planned |
