@@ -6,6 +6,8 @@ import { apiLimiter } from './middleware/rateLimit.js';
 import { notFound, errorHandler } from './middleware/errorHandler.js';
 import authRoutes from './routes/auth.routes.js';
 import healthRoutes from './routes/health.routes.js';
+import menuRoutes from './routes/menu.routes.js';
+import restaurantRoutes from './routes/restaurant.routes.js';
 
 export const app = express();
 
@@ -22,6 +24,8 @@ app.use(express.json({ limit: '10kb' }));
 
 app.use('/api/health', healthRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/menu', menuRoutes);
+app.use('/api/restaurant', restaurantRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
