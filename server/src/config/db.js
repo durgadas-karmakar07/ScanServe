@@ -8,6 +8,9 @@ mongoose.set('strictQuery', true);
 
 export async function connectDb() {
   await mongoose.connect(env.MONGODB_URI, { serverSelectionTimeoutMS: 10_000 });
+  // Create collections and unique indexes (email, slug) before taking requests: uniqueness and
+  // sign-up transactions depend on them existing.
+  await Promise.all(Object.values(mongoose.models).map((model) => model.init()));
   console.info(`MongoDB connected (database: ${mongoose.connection.name})`);
 }
 

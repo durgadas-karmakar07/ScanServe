@@ -4,6 +4,7 @@ import cors from 'cors';
 import { env, isProduction } from './config/env.js';
 import { apiLimiter } from './middleware/rateLimit.js';
 import { notFound, errorHandler } from './middleware/errorHandler.js';
+import authRoutes from './routes/auth.routes.js';
 import healthRoutes from './routes/health.routes.js';
 
 export const app = express();
@@ -20,6 +21,7 @@ app.use('/api', apiLimiter);
 app.use(express.json({ limit: '10kb' }));
 
 app.use('/api/health', healthRoutes);
+app.use('/api/auth', authRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

@@ -13,7 +13,9 @@ export function notFound(req, res, next) {
 // Express treats a middleware with 4 arguments as the error handler.
 export function errorHandler(err, req, res, _next) {
   if (err instanceof AppError) {
-    return res.status(err.statusCode).json({ error: { code: err.code, message: err.message } });
+    const error = { code: err.code, message: err.message };
+    if (err.fields) error.fields = err.fields;
+    return res.status(err.statusCode).json({ error });
   }
 
   if (err.type && err.status >= 400 && err.status < 500) {
