@@ -1,4 +1,5 @@
 import { MenuItem } from '../models/MenuItem.js';
+import { assertOwnPhoto, removeReplacedPhoto } from '../services/photo.service.js';
 import { AppError } from '../utils/AppError.js';
 
 const MAX_MENU_ITEMS = 200;
@@ -19,6 +20,8 @@ export async function listMenu(req, res) {
 
 export async function createMenuItem(req, res) {
   const { restaurantId } = req.auth;
+  assertOwnPhoto(req.valid.body.photo, restaurantId, 'dish', 'photo');
+
   const count = await MenuItem.countDocuments({ restaurantId });
   if (count >= MAX_MENU_ITEMS) {
     throw new AppError(409, 'MENU_FULL', `A menu can have up to ${MAX_MENU_ITEMS} dishes.`);
@@ -34,22 +37,26 @@ export async function createMenuItem(req, res) {
 }
 
 export async function updateMenuItem(req, res) {
-  const item = await MenuItem.findOne({
-    _id: req.valid.params.id,
-    restaurantId: req.auth.restaurantId,
-  });
+  const { restaurantId } = req.auth;
+  const changes = req.valid.body;
+  assertOwnPhoto(changes.photo, restaurantId, 'dish', 'photo');
+
+  const item = await MenuItem.findOne({ _id: req.valid.params.id, restaurantId });
   if (!item) throw notFound();
 
-  item.set(req.valid.body);
+  const oldPhoto = item.photo?.toObject();
+  item.set(changes);
   await item.save();
+  if ('photo' in changes) removeReplacedPhoto(oldPhoto, changes.photo);
   res.json({ item: item.toPublic() });
 }
 
 export async function deleteMenuItem(req, res) {
-  const { deletedCount } = await MenuItem.deleteOne({
+  const item = await MenuItem.findOneAndDelete({
     _id: req.valid.params.id,
     restaurantId: req.auth.restaurantId,
   });
-  if (deletedCount === 0) throw notFound();
+  if (!item) throw notFound();
+  removeReplacedPhoto(item.photo, null);
   res.status(204).end();
 }

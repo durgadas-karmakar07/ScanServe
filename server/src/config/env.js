@@ -29,14 +29,34 @@ const envSchema = z.object({
     .string()
     .default('Asia/Kolkata')
     .refine(isValidTimeZone, { error: 'must be a valid time zone, e.g. Asia/Kolkata' }),
+  // Photo uploads (Cloudinary). Optional: without them the app works and photo upload is off.
+  CLOUDINARY_CLOUD_NAME: z
+    .string()
+    .regex(/^[a-z0-9_-]{1,64}$/i, 'must be the cloud name from the Cloudinary dashboard')
+    .optional(),
+  CLOUDINARY_API_KEY: z
+    .string()
+    .regex(/^\d{6,20}$/, 'must be the numeric API key')
+    .optional(),
+  CLOUDINARY_API_SECRET: z.string().min(10, 'looks too short').optional(),
 });
+
+const CLOUDINARY_KEYS = ['CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET'];
 
 // Treat blank lines like `PORT=` as "not set" so defaults apply instead of empty strings.
 const rawEnv = Object.fromEntries(
   Object.keys(envSchema.shape).map((key) => [key, process.env[key] || undefined]),
 );
 
-const result = envSchema.safeParse(rawEnv);
+const result = envSchema
+  .refine(
+    (values) => {
+      const setCount = CLOUDINARY_KEYS.filter((key) => values[key]).length;
+      return setCount === 0 || setCount === CLOUDINARY_KEYS.length;
+    },
+    { error: 'set all three CLOUDINARY_* variables, or none', path: ['CLOUDINARY_*'] },
+  )
+  .safeParse(rawEnv);
 
 if (!result.success) {
   // Print only variable names and problems, never the values (they may be secrets).

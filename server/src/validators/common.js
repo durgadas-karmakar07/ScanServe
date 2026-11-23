@@ -21,5 +21,26 @@ export const upiIdSchema = z
   .trim()
   .regex(UPI_ID_PATTERN, 'Enter a valid UPI ID, e.g. royalcafe@okaxis');
 
+// Optional one-line text (dish description, café tagline); an empty string clears it.
+export const optionalLineSchema = (max) =>
+  z
+    .string()
+    .trim()
+    .max(max, `Use at most ${max} characters`)
+    .transform((value) => value.replace(/\s+/g, ' '));
+
+// A Cloudinary photo as returned by the upload, or null to remove the photo. That the id is in
+// the café's own folder is checked in the controller, where the token's restaurantId is known.
+export const photoInputSchema = z
+  .object({
+    publicId: z
+      .string()
+      .max(255)
+      .regex(/^[\w\-/]+$/, 'Invalid photo'),
+    version: z.number().int().positive(),
+  })
+  .strict()
+  .nullable();
+
 // For PATCH bodies: every field is optional, but an empty update is a mistake.
 export const hasAtLeastOneField = (value) => Object.keys(value).length > 0;
