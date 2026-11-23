@@ -31,10 +31,10 @@ Build in this order. Each step should run in the browser before moving on.
 - [x] Client: `/owner/register`, `/owner/login`, `AuthContext`, protected `/owner` route
 
 ### 1.3 Menu
-- [ ] `MenuItem` model and owner CRUD API
-- [ ] Owner menu editor: add, edit, delete, categories, veg tag, sold-out switch
-- [ ] Settings page: café name, UPI ID, "accepting orders" switch
-- [ ] QR poster page: QR for `<site>/m/<slug>`, printable
+- [x] `MenuItem` model and owner CRUD API
+- [x] Owner menu editor: add, edit, delete, categories, veg tag, sold-out switch
+- [x] Settings page: café name, UPI ID, "accepting orders" switch
+- [x] QR poster page: QR for `<site>/m/<slug>`, printable
 
 ### 1.4 Customer menu and device
 - [ ] `Device` model; `POST /api/devices`; `useDevice` hook saves `deviceId` and `name` in `localStorage`

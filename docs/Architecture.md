@@ -47,19 +47,23 @@ scanserve/
 │       ├── main.jsx
 │       ├── App.jsx            # routes
 │       ├── index.css          # Tailwind import + @theme tokens (see Design.md)
-│       ├── api/               # client.js (fetch wrapper), auth.js, health.js, menu.js, orders.js
+│       ├── api/               # client.js (fetch wrapper), auth.js, health.js, menu.js,
+│       │                      # restaurant.js, orders.js
 │       ├── components/        # RequireAuth.jsx (guards owner routes)
-│       ├── components/ui/     # Button, Card, Badge, Input, Alert, Sheet, Toast
-│       ├── context/           # authContext.js + AuthProvider.jsx, CartContext.jsx
-│       ├── hooks/             # useAuth.js, useDevice.js, useSocket.js
+│       ├── components/ui/     # Button, Card, Badge, Input, Alert, Switch, VegMark, Sheet
+│       ├── context/           # authContext.js + AuthProvider.jsx, toastContext.js +
+│       │                      # ToastProvider.jsx (the toast), CartContext.jsx
+│       ├── hooks/             # useAuth.js, useToast.js, useFocusFirstError.js, useDevice.js,
+│       │                      # useSocket.js
 │       ├── lib/               # format.js (₹), upi.js (UPI link), slug.js, tokenStorage.js
 │       └── features/
 │           ├── common/        # NotFoundPage
 │           ├── health/        # HealthPage (setup check, step 1.1)
 │           ├── customer/      # MenuPage, CartBar, OrderStatusPage, PayPanel
 │           ├── kitchen/       # KitchenPage, OrderCard
-│           └── owner/         # AuthLayout, RegisterPage, LoginPage, DashboardPage,
-│                              # MenuEditor, UnpaidList, QrPoster, SettingsPage
+│           └── owner/         # AuthLayout, RegisterPage, LoginPage, OwnerLayout (tabs),
+│               │              # QrPoster, SettingsPage, UnpaidList
+│               └── menu/      # MenuEditor, MenuItemRow, DishSheet, DeleteDishSheet
 └── server/
     ├── .env.example
     └── src/
@@ -72,7 +76,8 @@ scanserve/
         ├── services/          # auth.service.js, order.service.js, counter.service.js
         ├── middleware/        # requireAuth.js, requireDevice.js, validate.js, errorHandler.js,
         │                      # rateLimit.js (apiLimiter, authLimiter)
-        ├── validators/        # zod schemas: common.js, auth.validators.js, ...
+        ├── validators/        # zod schemas: common.js (ids, names, UPI ID), auth, menu,
+        │                      # restaurant (*.validators.js)
         ├── socket/            # index.js (auth, rooms), emit.js (helpers)
         └── utils/             # AppError.js, token.js (sign / verify JWT)
 ```
@@ -86,7 +91,11 @@ scanserve/
 | `/m/:slug` | Menu + cart | Customer |
 | `/m/:slug/order/:orderId` | Order status + pay | Customer |
 | `/owner/register`, `/owner/login` | Create café / log in | Owner |
-| `/owner` | Dashboard: unpaid list, menu editor, QR poster, settings | Owner |
+| `/owner` | Owner area with tabs; redirects to `/owner/menu` | Owner |
+| `/owner/menu` | Menu editor: add, edit, delete dishes, sold-out switch | Owner |
+| `/owner/qr` | Printable QR poster for `<site>/m/<slug>` | Owner |
+| `/owner/settings` | Café name, UPI ID, taking orders on/off | Owner |
+| `/owner/unpaid` | Unpaid list (step 1.7) | Owner |
 | `/kitchen` | Live kitchen board | Owner / cook (logged in on the kitchen device) |
 
 ## 5. Database schema (MongoDB, Mongoose)
@@ -94,7 +103,7 @@ scanserve/
 ```js
 Restaurant  { name, slug (unique), upiId, isAcceptingOrders: true, createdAt }
 Staff       { restaurantId, name, email (unique), passwordHash (select: false), role: 'owner', tokenVersion: 0 }
-MenuItem    { restaurantId, name, category, price (integer ₹), isVeg, available: true, sortOrder }
+MenuItem    { restaurantId, name, category, price (integer ₹ 1–99999), isVeg, isAvailable: true, sortOrder, createdAt, updatedAt }
 Device      { deviceId (unique, UUID), name, firstSeenAt, lastSeenAt }
 Order       {
   restaurantId, deviceId, customerName, orderNumber, businessDate: 'YYYY-MM-DD',
@@ -108,7 +117,7 @@ Order       {
 DailyCounter { restaurantId, date: 'YYYY-MM-DD', lastNumber }   // unique (restaurantId, date)
 ```
 
-**Indexes:** `Restaurant.slug` unique, `Staff.email` unique, `Staff.restaurantId`, `Device.deviceId` unique, `DailyCounter (restaurantId, date)` unique, `Order (restaurantId, status)`, `Order (deviceId, createdAt)`.
+**Indexes:** `Restaurant.slug` unique, `Staff.email` unique, `Staff.restaurantId`, `MenuItem (restaurantId, sortOrder)`, `Device.deviceId` unique, `DailyCounter (restaurantId, date)` unique, `Order (restaurantId, status)`, `Order (deviceId, createdAt)`.
 
 **Order number:** `DailyCounter.findOneAndUpdate({ restaurantId, date }, { $inc: { lastNumber: 1 } }, { upsert: true, new: true })`. Business date uses the `Asia/Kolkata` time zone.
 
@@ -125,6 +134,18 @@ All responses are JSON. Errors: `{ "error": { "code": "ORDER_NOT_FOUND", "messag
 | `GET /api/auth/me` | — (`Authorization: Bearer <token>`) | `200 { staff, restaurant }` | `401 UNAUTHORIZED` |
 
 `staff` = `{ id, name, email, role }`; `restaurant` = `{ id, name, slug, upiId, isAcceptingOrders }`. Password hashes and `tokenVersion` never leave the server. Rate limits on these routes: 5 failed attempts per IP + email and 30 failed attempts per IP per 15 minutes (login and register together), and 5 successful sign-ups per IP per hour.
+
+**Menu and café settings (step 1.3)**: all need the owner token; every query uses the `restaurantId` from the token, so another café's dish id gives `404`.
+
+| Endpoint | Body | Success | Errors |
+|---|---|---|---|
+| `GET /api/menu` | — | `200 { items }` sorted by `sortOrder` | `401` |
+| `POST /api/menu` | `{ name, category, price, isVeg, isAvailable? }` | `201 { item }` (server sets `sortOrder`) | `400 VALIDATION_ERROR`, `409 MENU_FULL` (200 dishes) |
+| `PATCH /api/menu/:id` | any of `{ name, category, price, isVeg, isAvailable }` | `200 { item }` | `400`, `404 MENU_ITEM_NOT_FOUND` |
+| `DELETE /api/menu/:id` | — | `204` | `400`, `404 MENU_ITEM_NOT_FOUND` |
+| `PATCH /api/restaurant` | any of `{ name, upiId, isAcceptingOrders }` (the slug cannot change) | `200 { restaurant }` | `400` |
+
+`item` = `{ id, name, category, price, isVeg, isAvailable, sortOrder }`. Names and categories are trimmed with repeated spaces collapsed; price is a whole number of rupees.
 
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
