@@ -1,7 +1,8 @@
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { MongoRateLimitStore } from './mongoRateLimitStore.js';
 
-const FIFTEEN_MINUTES = 15 * 60 * 1000;
+const ONE_MINUTE = 60 * 1000;
+const FIFTEEN_MINUTES = 15 * ONE_MINUTE;
 const ONE_HOUR = 60 * 60 * 1000;
 const ONE_DAY = 24 * ONE_HOUR;
 
@@ -53,6 +54,36 @@ export const signupIpLimiter = rateLimit({
   skipFailedRequests: true,
   keyGenerator: ipKey,
   message: rateLimitMessage('Too many new cafés from this network. Please try again later.'),
+});
+
+// New customer devices. Only new IDs count (a phone confirming its existing ID gets 200), and
+// the limit is generous because many phones in India share one mobile-network IP.
+export const deviceCreateLimiter = rateLimit({
+  ...baseOptions,
+  windowMs: FIFTEEN_MINUTES,
+  limit: 100,
+  keyGenerator: ipKey,
+  skipSuccessfulRequests: true,
+  requestWasSuccessful: (req, res) => res.statusCode === 200,
+  message: rateLimitMessage('Too many new phones from this network. Please try again later.'),
+});
+
+// Rules.md section 5: order creation is limited to 10 a minute per device and per IP.
+export const orderIpLimiter = rateLimit({
+  ...baseOptions,
+  windowMs: ONE_MINUTE,
+  limit: 10,
+  keyGenerator: ipKey,
+  message: rateLimitMessage('Too many orders from this network. Please wait a minute.'),
+});
+
+// Runs after requireDevice, so req.device is a real device.
+export const orderDeviceLimiter = rateLimit({
+  ...baseOptions,
+  windowMs: ONE_MINUTE,
+  limit: 10,
+  keyGenerator: (req) => `device:${req.device.deviceId}`,
+  message: rateLimitMessage('Too many orders from this phone. Please wait a minute.'),
 });
 
 // Each upload signature is good for one photo, so these cap photo uploads. All cafés share one

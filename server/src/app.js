@@ -5,6 +5,7 @@ import { env, isProduction } from './config/env.js';
 import { apiLimiter } from './middleware/rateLimit.js';
 import { notFound, errorHandler } from './middleware/errorHandler.js';
 import authRoutes from './routes/auth.routes.js';
+import deviceRoutes from './routes/device.routes.js';
 import healthRoutes from './routes/health.routes.js';
 import menuRoutes from './routes/menu.routes.js';
 import publicRoutes from './routes/public.routes.js';
@@ -29,6 +30,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/menu', menuRoutes);
 app.use('/api/restaurant', restaurantRoutes);
 app.use('/api/uploads', uploadRoutes);
+app.use('/api/devices', deviceRoutes);
 app.use('/api/public', publicRoutes);
 
 app.use(notFound);
