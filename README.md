@@ -181,7 +181,7 @@ Security is built in from the first phase:
 
 - Prices and totals are always recalculated on the server; the client cannot change what a customer pays.
 - Every request is validated with strict schemas; MongoDB query injection is blocked.
-- Passwords are hashed with bcrypt; tokens can be revoked; login is rate-limited.
+- Passwords are hashed with bcrypt; login is rate-limited; "Log out everywhere" revokes every login, kitchen screens included.
 - Every owner query is scoped to that owner's café, and a phone can only see its own orders.
 - Strict CORS, security headers and a Content-Security-Policy; no secrets in the repository.
 
@@ -189,7 +189,7 @@ The full rule set is in [docs/Rules.md](docs/Rules.md#5-security-rules-strict-ne
 
 ## Roadmap
 
-- [ ] **Phase 1, MVP:** ordering, live kitchen, pay after eating, unpaid list
+- [ ] **Phase 1, MVP:** ordering, live kitchen, pay after eating, unpaid list (all built and tested; the final check on a real phone with the printed QR is left)
 - [ ] **Phase 2:** voice kitchen
 - [ ] **Phase 3:** daily hisab and owner tools
 - [ ] **Phase 4:** Hindi, Bengali and English; PWA; push notifications

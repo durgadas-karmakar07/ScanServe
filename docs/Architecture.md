@@ -59,7 +59,7 @@ scanserve/
 │       │                      # useCart.js, useActiveSection.js (scroll spy), useSocket.js, useWakeLock.js
 │       ├── lib/               # format.js (₹), upi.js (UPI link), slug.js, tokenStorage.js,
 │       │                      # cartStorage.js, menu.js (group by category), deviceStorage.js,
-│       │                      # orderHistory.js, keyRepeatGuard.js, orderSound.js (Web Audio chime)
+│       │                      # keyRepeatGuard.js, orderSound.js (Web Audio chime), upi.js
 │       └── features/
 │           ├── common/        # NotFoundPage
 │           ├── health/        # HealthPage (setup check, step 1.1)
@@ -165,6 +165,15 @@ All responses are JSON. Errors: `{ "error": { "code": "ORDER_NOT_FOUND", "messag
 | `POST /api/uploads/signature` | Owner | `{ kind: 'dish' | 'cover' | 'logo' }` | `200 { cloudName, apiKey, signature, params }`; the browser posts the file with these to `https://api.cloudinary.com/v1_1/<cloud>/image/upload` | `400`, `401`, `429 RATE_LIMITED` (per café 60 an hour and 100 a day, per network 120 a day, 300 a day across all cafés; only signatures given out count; the daily counts live in MongoDB so a sleeping or restarted server does not reset them), `503 PHOTOS_NOT_CONFIGURED` |
 | `GET /api/public/:slug/menu` | — | — | `200 { restaurant: { name, slug, tagline, isAcceptingOrders, coverUrl, logoUrl }, items: [{ id, name, description, category, price, isVeg, isAvailable, photoUrl }] }` (sold-out dishes included; no UPI ID, no internal ids) | `400` bad slug, `404 RESTAURANT_NOT_FOUND` |
 
+**Review fixes (Phase 1 completion, 2026-11-24)**
+
+- `POST /api/public/:slug/orders` takes an optional `checkoutId` (UUID v4, made per checkout by the web app and renewed when the cart changes). The same id again answers `200` with the order already saved (partial unique index on `{ deviceId, checkoutId }`), so a lost answer and a second tap never make a duplicate order. The 2-open-orders limit counts per café.
+- `GET /api/public/:slug/orders/mine` (device) lists this phone's open orders at the café, newest first; the menu shows a link to each (no order history is kept in the browser any more).
+- `GET /api/orders` also takes `order=oldest|newest` (default oldest) and returns `{ orders, count, amount, hasMore }`: at most 200 orders, while `count` and `amount` (sum of totals) cover all matching orders. The kitchen and unpaid screens warn when `hasMore`. The unpaid list asks for `status=ready&order=newest`.
+- The kitchen's `PATCH /api/orders/:id/cancel` works only on `new` orders (`changeOrderStatus` `onlyFrom`), so a Cancel from a stale screen cannot undo a Ready; the cancel sheet also closes when its order leaves the board.
+- Socket handshake errors: `UNAUTHORIZED` for a bad or revoked token or an unknown device (the web app then reloads over REST, and a 401 logs the owner out), `RETRY` for anything else (the web app retries with backoff, also after the server ends a connection).
+- `POST /api/auth/logout-all` ("Log out everywhere" in Settings) increments `tokenVersion`, so every older token fails on its next request, and disconnects the café's kitchen sockets so they must log in again.
+
 **Pay after eating (step 1.7, 2026-11-24)**
 
 | Endpoint | Auth | Body | Success | Errors |
@@ -210,15 +219,17 @@ Each signature is for exactly one photo. It covers `allowed_formats=jpg,jpeg,png
 | PATCH | `/api/orders/:id/ready` | Owner | The one kitchen tap |
 | PATCH | `/api/orders/:id/cancel` | Owner | Cancel |
 | PATCH | `/api/orders/:id/mark-paid` | Owner | Owner marks paid (`upi` / `cash`) |
+| POST | `/api/auth/logout-all` | Owner | Log out everywhere: raises `tokenVersion`, cuts the café's kitchen sockets |
 | POST | `/api/devices` | — | Create or confirm a device ID |
 | GET | `/api/public/:slug/menu` | — | Restaurant info + available dishes |
 | POST | `/api/public/:slug/orders` | Device | Place order: `{ customerName, items: [{ menuItemId, qty }] }` |
+| GET | `/api/public/:slug/orders/mine` | Device | This phone's open orders at the café (links on the menu) |
 | GET | `/api/public/orders/:id` | Device (must own it) | Order status |
 | POST | `/api/public/orders/:id/paid` | Device (must own it) | Customer marks paid: `{ method }` |
 
 - **Owner auth:** `Authorization: Bearer <JWT>` (7-day expiry; payload `staffId`, `restaurantId`, `role`, `tokenVersion`). Full security rules: `Rules.md` section 5.
 - **Device auth:** header `X-Device-Id: <uuid>`; the server checks the device exists and owns the order.
-- **Order rules:** server recalculates every price from `MenuItem`; rejects unavailable dishes; max 2 open (`new` or `ready`, unpaid) orders per device; max 20 of one dish per order.
+- **Order rules:** server recalculates every price from `MenuItem`; rejects unavailable dishes; max 2 open (`new` or `ready`, unpaid) orders per device at each café; max 20 of one dish per order.
 
 ## 7. Socket.io
 

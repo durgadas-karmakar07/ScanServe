@@ -66,6 +66,9 @@ Build in this order. Each step should run in the browser before moving on.
 - [ ] Test on a real phone with the printed QR (developer, on the live site with mobile data; README screenshots and setup check done 2026-11-24)
 
 ### Phase 1 — Done when
+
+Status (2026-11-24): items 2–6, 8 and 9 checked (API tests, browser checks, Rules.md checklist, npm audit, README with screenshots and a setup tested on a fresh clone). Items 1 and 7 need the developer's real phone with mobile data and the printed QR.
+
 1. On a phone, scan the QR → order 2 dishes → the order appears on the kitchen screen (another device) within 2 seconds.
 2. Tapping Ready makes the customer's page show "Ready" without a refresh.
 3. The customer taps "Paying cash"; the order disappears from the owner's unpaid list.

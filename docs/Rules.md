@@ -81,7 +81,7 @@ Security is a hard requirement from Phase 1, not a later phase. Every change mus
 - Every body, query and param is validated by a strict zod schema (`.strict()` rejects unknown keys) before it reaches a controller: string length limits, integers only for money and quantities, ObjectId format for ids, UUID v4 for `deviceId`.
 - Turn on `mongoose.set('sanitizeFilter', true)` and never pass `req.body` or `req.query` straight into a Mongoose query (blocks `$gt`-style injection).
 - `express.json({ limit: '10kb' })`.
-- The server recalculates every price and total from the database; prices sent by the client are ignored. Limits: max 20 of one dish, max 30 lines per order, max 2 open orders per device.
+- The server recalculates every price and total from the database; prices sent by the client are ignored. Limits: max 20 of one dish, max 30 lines per order, max 2 open orders per device at each café.
 - The UPI ID must match `^[a-zA-Z0-9._-]{2,256}@[a-zA-Z]{2,64}$`. UPI link parameters are built with `URLSearchParams`, and the amount always comes from the server.
 
 **Socket.io**
