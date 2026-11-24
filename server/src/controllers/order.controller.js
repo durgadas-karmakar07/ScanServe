@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import { OPEN_ORDER_STATUSES, Order } from '../models/Order.js';
 import { Restaurant } from '../models/Restaurant.js';
+import { businessDate } from '../services/counter.service.js';
 import { changeOrderStatus, placeOrder } from '../services/order.service.js';
 import { AppError } from '../utils/AppError.js';
 
@@ -135,4 +136,68 @@ export async function markOrderPaid(req, res) {
     changes: { paymentMethod: req.valid.body.method, paidMarkedBy: 'owner' },
   });
   res.json({ order: order.toKitchen() });
+}
+
+// GET /api/orders/summary — the numbers on the owner's dashboard. "Today" is the café's
+// business day (Asia/Kolkata), the same day that order numbers use. Paid amounts count orders
+// paid today; open counts (waiting in the kitchen, ready but unpaid) cover every day.
+export async function getOrderSummary(req, res) {
+  const restaurantId = new mongoose.Types.ObjectId(req.auth.restaurantId);
+  const today = businessDate();
+  const [todayStats] = await Order.aggregate([
+    { $match: { restaurantId, businessDate: today } },
+    {
+      $group: {
+        _id: null,
+        orders: { $sum: { $cond: [{ $ne: ['$status', 'cancelled'] }, 1, 0] } },
+        cancelled: { $sum: { $cond: [{ $eq: ['$status', 'cancelled'] }, 1, 0] } },
+        cashAmount: {
+          $sum: {
+            $cond: [
+              { $and: [{ $eq: ['$status', 'paid'] }, { $eq: ['$paymentMethod', 'cash'] }] },
+              '$total',
+              0,
+            ],
+          },
+        },
+        upiAmount: {
+          $sum: {
+            $cond: [
+              { $and: [{ $eq: ['$status', 'paid'] }, { $eq: ['$paymentMethod', 'upi'] }] },
+              '$total',
+              0,
+            ],
+          },
+        },
+      },
+    },
+  ]);
+  const [open] = await Order.aggregate([
+    { $match: { restaurantId, status: { $in: ['new', 'ready'] } } },
+    {
+      $group: {
+        _id: null,
+        newCount: { $sum: { $cond: [{ $eq: ['$status', 'new'] }, 1, 0] } },
+        readyCount: { $sum: { $cond: [{ $eq: ['$status', 'ready'] }, 1, 0] } },
+        unpaidAmount: { $sum: { $cond: [{ $eq: ['$status', 'ready'] }, '$total', 0] } },
+      },
+    },
+  ]);
+  const cashAmount = todayStats?.cashAmount ?? 0;
+  const upiAmount = todayStats?.upiAmount ?? 0;
+  res.json({
+    businessDate: today,
+    today: {
+      orders: todayStats?.orders ?? 0,
+      cancelled: todayStats?.cancelled ?? 0,
+      paidAmount: cashAmount + upiAmount,
+      cashAmount,
+      upiAmount,
+    },
+    open: {
+      newCount: open?.newCount ?? 0,
+      readyCount: open?.readyCount ?? 0,
+      unpaidAmount: open?.unpaidAmount ?? 0,
+    },
+  });
 }
