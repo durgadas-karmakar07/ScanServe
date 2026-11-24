@@ -48,11 +48,11 @@ Build in this order. Each step should run in the browser before moving on.
 - [x] Order status page `/m/:slug/order/:orderId` showing number, items, total, status (Check status button until sockets in 1.6)
 
 ### 1.6 Live kitchen
-- [ ] Socket.io server with `kitchen:<restaurantId>` (JWT) and `device:<deviceId>` rooms
-- [ ] `/kitchen` page: cards for `new` orders, oldest first, with a sound on `order:new`
-- [ ] Big **Ready** button → `PATCH /ready` → customer page switches to "Ready, please collect"
-- [ ] **Cancel** button (with confirm) → customer sees "Cancelled by the café"
-- [ ] Refetch on socket reconnect
+- [x] Socket.io server with `kitchen:<restaurantId>` (JWT) and `device:<deviceId>` rooms
+- [x] `/kitchen` page: cards for `new` orders, oldest first, with a sound on `order:new` ("Turn on sound" tap; screen kept awake)
+- [x] Big **Ready** button → `PATCH /ready` → customer page switches to "Ready, please collect" (phone vibrates)
+- [x] **Cancel** button (with confirm) → customer sees "Cancelled by the café"
+- [x] Refetch on socket reconnect
 
 ### 1.7 Pay after eating
 - [ ] Pay panel on the order status page once the order is `ready`: total in big text

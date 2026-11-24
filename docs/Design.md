@@ -142,7 +142,7 @@ Kitchen (/kitchen, tablet landscape, dark)
 └──────────────┴──────────────┴──────────────┘
 ```
 
-Owner area: tabs **Menu · QR poster · Settings** (Unpaid arrives in 1.7); bottom tabs on phones, side menu on desktop with the café's logo and name at the top.
+Owner area: tabs **Kitchen · Menu · QR poster · Settings** (Kitchen opens the full-screen `/kitchen` board; Unpaid arrives in 1.7); bottom tabs on phones, side menu on desktop with the café's logo and name at the top.
 
 ## 6. Responsive breakpoints
 

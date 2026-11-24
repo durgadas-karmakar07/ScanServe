@@ -56,16 +56,16 @@ scanserve/
 │       ├── context/           # authContext.js + AuthProvider.jsx, toastContext.js +
 │       │                      # ToastProvider.jsx (the toast), cartContext.js + CartProvider.jsx
 │       ├── hooks/             # useAuth.js, useToast.js, useFocusFirstError.js, useDevice.js,
-│       │                      # useCart.js, useActiveSection.js (scroll spy), useSocket.js
+│       │                      # useCart.js, useActiveSection.js (scroll spy), useSocket.js, useWakeLock.js
 │       ├── lib/               # format.js (₹), upi.js (UPI link), slug.js, tokenStorage.js,
 │       │                      # cartStorage.js, menu.js (group by category), deviceStorage.js,
-│       │                      # orderHistory.js, keyRepeatGuard.js
+│       │                      # orderHistory.js, keyRepeatGuard.js, orderSound.js (Web Audio chime)
 │       └── features/
 │           ├── common/        # NotFoundPage
 │           ├── health/        # HealthPage (setup check, step 1.1)
 │           ├── customer/      # MenuPage, CustomerMenu, MenuHero, CategoryTabs, DishCard,
 │           │                  # OrderSummary, NameStep, CartBar, OrderStatusPage, PayPanel
-│           ├── kitchen/       # KitchenPage, OrderCard
+│           ├── kitchen/       # KitchenPage (live board, sound, screen kept on), OrderCard
 │           └── owner/         # AuthLayout, RegisterPage, LoginPage, OwnerLayout (tabs),
 │               │              # QrPoster, SettingsPage, BrandingCard, UnpaidList
 │               └── menu/      # MenuEditor, MenuItemRow, DishSheet, DeleteDishSheet
@@ -87,7 +87,7 @@ scanserve/
         │                      # mongoRateLimitStore.js (limits that survive restarts)
         ├── validators/        # zod schemas: common.js (ids, names, UPI ID), auth, menu,
         │                      # restaurant, upload, public, device, order (*.validators.js)
-        ├── socket/            # index.js (auth, rooms), emit.js (helpers)
+        ├── socket/            # index.js (handshake auth, server-chosen rooms), emit.js (emitToKitchen, emitToDevice)
         └── utils/             # AppError.js, token.js (sign / verify JWT), cloudinary.js
 ```
 
@@ -164,6 +164,16 @@ All responses are JSON. Errors: `{ "error": { "code": "ORDER_NOT_FOUND", "messag
 |---|---|---|---|---|
 | `POST /api/uploads/signature` | Owner | `{ kind: 'dish' | 'cover' | 'logo' }` | `200 { cloudName, apiKey, signature, params }`; the browser posts the file with these to `https://api.cloudinary.com/v1_1/<cloud>/image/upload` | `400`, `401`, `429 RATE_LIMITED` (per café 60 an hour and 100 a day, per network 120 a day, 300 a day across all cafés; only signatures given out count; the daily counts live in MongoDB so a sleeping or restarted server does not reset them), `503 PHOTOS_NOT_CONFIGURED` |
 | `GET /api/public/:slug/menu` | — | — | `200 { restaurant: { name, slug, tagline, isAcceptingOrders, coverUrl, logoUrl }, items: [{ id, name, description, category, price, isVeg, isAvailable, photoUrl }] }` (sold-out dishes included; no UPI ID, no internal ids) | `400` bad slug, `404 RESTAURANT_NOT_FOUND` |
+
+**Live kitchen (step 1.6, 2026-11-24)**
+
+| Endpoint | Auth | Body | Success | Errors |
+|---|---|---|---|---|
+| `GET /api/orders?status=new` | Owner | — (`status` is a comma list of `new`, `ready`, `paid`, `cancelled`; default `new`) | `200 { orders }` oldest first, at most 100, only the token's café | `400`, `401` |
+| `PATCH /api/orders/:id/ready` | Owner | — | `200 { order }`; repeating it returns the same order (double tap is harmless) | `400`, `401`, `404 ORDER_NOT_FOUND` (also another café's order), `409 INVALID_STATUS_CHANGE` |
+| `PATCH /api/orders/:id/cancel` | Owner | — | `200 { order }` (from `new` or `ready`; repeating is harmless) | same as above |
+
+Kitchen `order` = `{ id, orderNumber, customerName, items: [{ name, price, qty }], total, status, createdAt, readyAt, cancelledAt }`. Every status change goes through `changeOrderStatus` in `order.service.js`: one atomic update that matches only the allowed starting statuses (`new → ready`, `new|ready → cancelled`), so Ready and Cancel tapped at the same moment cannot both apply out of order. Socket.io runs on the same port as the API (path `/socket.io`, outside the `/api` rate limiter); the handshake needs `auth: { token }` (checked like `requireAuth`, including `tokenVersion`) or `auth: { deviceId }` (must exist), otherwise it is refused with `UNAUTHORIZED`. There are no client events. The kitchen board and the order status page refetch over REST on every connect and reconnect. The web app's CSP allows `wss://` to the API. Measured locally: a new order reaches the kitchen in about 0.4 s.
 
 **Devices and orders (steps 1.4 and 1.5, 2026-11-24)**
 
