@@ -25,7 +25,7 @@ In a small café with two or three people, the owner usually cooks, takes orders
 
 It is built for real tiny cafés, starting with one in Durgapur, West Bengal.
 
-**Live:** [scanserve-cafe.netlify.app](https://scanserve-cafe.netlify.app). Work in progress: café owners can create an account, build their menu and print a QR poster, and customers can open the menu from the QR (photos, categories, cart); placing orders comes next. `/health` shows a setup check. The free API server sleeps when idle, so the first visit can take up to a minute.
+**Live:** [scanserve-cafe.netlify.app](https://scanserve-cafe.netlify.app). Work in progress: café owners can create an account, build their menu and print a QR poster, and customers can open the menu from the QR (photos, categories, cart), place an order with no login and follow its status by order number; the live kitchen screen comes next. `/health` shows a setup check. The free API server sleeps when idle, so the first visit can take up to a minute.
 
 ## Features
 
@@ -36,10 +36,10 @@ It is built for real tiny cafés, starting with one in Durgapur, West Bengal.
 | Printable QR poster for the menu board | 1 | Done |
 | Customer menu from the QR: café cover and logo, category tabs, dish cards, cart | 1 | Done |
 | Dish photos, café cover photo and logo (Cloudinary) | 1 | Built and tested; live once the Cloudinary keys are set on the server |
-| Customer ordering with no login: name asked once, remembered on the phone | 1 | Planned |
-| Daily order numbers (1, 2, 3...) | 1 | Planned |
+| Customer ordering with no login: name asked once, remembered on the phone | 1 | Done |
+| Daily order numbers (1, 2, 3...) | 1 | Done |
 | Live kitchen screen with one-tap **Ready** and **Cancel** | 1 | Planned |
-| Live order status on the customer's phone | 1 | Planned |
+| Live order status on the customer's phone | 1 | In progress: status page done, live updates come with the kitchen screen |
 | Pay after eating: UPI app opens with the amount filled in, or pay cash | 1 | Planned |
 | Owner's unpaid list | 1 | Planned |
 | Voice kitchen: orders read aloud, customer names called | 2 | Planned |

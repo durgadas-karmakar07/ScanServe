@@ -47,8 +47,9 @@ scanserve/
 │       ├── main.jsx
 │       ├── App.jsx            # routes
 │       ├── index.css          # Tailwind import + @theme tokens (see Design.md)
-│       ├── api/               # client.js (fetch wrapper), auth.js, health.js, menu.js,
-│       │                      # restaurant.js, orders.js
+│       ├── api/               # client.js (fetch wrapper; token or X-Device-Id), auth.js,
+│       │                      # health.js, menu.js, restaurant.js, uploads.js, public.js,
+│       │                      # devices.js, orders.js
 │       ├── components/        # RequireAuth.jsx (guards owner routes), Wordmark, DishPhoto
 │       ├── components/ui/     # Button, LinkButton, Card, Badge, Input, Alert, Switch, VegMark,
 │       │                      # Sheet, PhotoPicker, QuantityStepper
@@ -57,12 +58,13 @@ scanserve/
 │       ├── hooks/             # useAuth.js, useToast.js, useFocusFirstError.js, useDevice.js,
 │       │                      # useCart.js, useActiveSection.js (scroll spy), useSocket.js
 │       ├── lib/               # format.js (₹), upi.js (UPI link), slug.js, tokenStorage.js,
-│       │                      # cartStorage.js, menu.js (group by category)
+│       │                      # cartStorage.js, menu.js (group by category), deviceStorage.js,
+│       │                      # orderHistory.js, keyRepeatGuard.js
 │       └── features/
 │           ├── common/        # NotFoundPage
 │           ├── health/        # HealthPage (setup check, step 1.1)
 │           ├── customer/      # MenuPage, CustomerMenu, MenuHero, CategoryTabs, DishCard,
-│           │                  # OrderSummary, CartBar, OrderStatusPage, PayPanel
+│           │                  # OrderSummary, NameStep, CartBar, OrderStatusPage, PayPanel
 │           ├── kitchen/       # KitchenPage, OrderCard
 │           └── owner/         # AuthLayout, RegisterPage, LoginPage, OwnerLayout (tabs),
 │               │              # QrPoster, SettingsPage, BrandingCard, UnpaidList
@@ -75,15 +77,16 @@ scanserve/
         ├── config/            # env.js (validated env), db.js
         ├── models/            # Restaurant, Staff, MenuItem, photoSchema, RateLimitCounter,
         │                      # Device, Order, DailyCounter
-        ├── routes/            # health, auth, public, menu, uploads, orders, restaurant
+        ├── routes/            # health, auth, devices, public (menu + customer orders), menu,
+        │                      # uploads, orders (kitchen, step 1.6), restaurant
         ├── controllers/       # one file per route group
         ├── services/          # auth.service.js, photo.service.js, order.service.js,
         │                      # counter.service.js
         ├── middleware/        # requireAuth.js, requireDevice.js, validate.js, errorHandler.js,
-        │                      # rateLimit.js (API, auth and photo-upload limiters),
+        │                      # rateLimit.js (API, auth, device, order and photo limiters),
         │                      # mongoRateLimitStore.js (limits that survive restarts)
         ├── validators/        # zod schemas: common.js (ids, names, UPI ID), auth, menu,
-        │                      # restaurant (*.validators.js)
+        │                      # restaurant, upload, public, device, order (*.validators.js)
         ├── socket/            # index.js (auth, rooms), emit.js (helpers)
         └── utils/             # AppError.js, token.js (sign / verify JWT), cloudinary.js
 ```
@@ -111,7 +114,7 @@ Restaurant  { name, slug (unique), tagline, upiId, isAcceptingOrders: true, cove
 Staff       { restaurantId, name, email (unique), passwordHash (select: false), role: 'owner', tokenVersion: 0 }
 MenuItem    { restaurantId, name, description, category, price (integer ₹ 1–99999), isVeg, isAvailable: true, photo, sortOrder, createdAt, updatedAt }
 Photo       { publicId, version }   // Cloudinary id in scanserve/<NODE_ENV>/<restaurantId>/<dish|cover|logo>/; URLs are built when sending
-Device      { deviceId (unique, UUID), name, firstSeenAt, lastSeenAt }
+Device      { deviceId (unique, UUID v4 made by the server), name, firstSeenAt, lastSeenAt, orderLockUntil (internal) }
 Order       {
   restaurantId, deviceId, customerName, orderNumber, businessDate: 'YYYY-MM-DD',
   items: [{ menuItemId, name, price, qty }],   // name + price COPIED at order time
@@ -161,6 +164,16 @@ All responses are JSON. Errors: `{ "error": { "code": "ORDER_NOT_FOUND", "messag
 |---|---|---|---|---|
 | `POST /api/uploads/signature` | Owner | `{ kind: 'dish' | 'cover' | 'logo' }` | `200 { cloudName, apiKey, signature, params }`; the browser posts the file with these to `https://api.cloudinary.com/v1_1/<cloud>/image/upload` | `400`, `401`, `429 RATE_LIMITED` (per café 60 an hour and 100 a day, per network 120 a day, 300 a day across all cafés; only signatures given out count; the daily counts live in MongoDB so a sleeping or restarted server does not reset them), `503 PHOTOS_NOT_CONFIGURED` |
 | `GET /api/public/:slug/menu` | — | — | `200 { restaurant: { name, slug, tagline, isAcceptingOrders, coverUrl, logoUrl }, items: [{ id, name, description, category, price, isVeg, isAvailable, photoUrl }] }` (sold-out dishes included; no UPI ID, no internal ids) | `400` bad slug, `404 RESTAURANT_NOT_FOUND` |
+
+**Devices and orders (steps 1.4 and 1.5, 2026-11-24)**
+
+| Endpoint | Auth | Body | Success | Errors |
+|---|---|---|---|---|
+| `POST /api/devices` | — (100 new devices per 15 min per IP; confirmations not counted) | `{ deviceId? }` (UUID v4) | known id: `200 { device: { deviceId, name } }`; no id or an unknown id: `201` with a **new server-made** id (a phone can never choose its id) | `400`, `429` |
+| `POST /api/public/:slug/orders` | Device (`X-Device-Id`); 10 a minute per IP and per device | `{ customerName (1–30 chars, any script, no control characters; "Guest" when skipped), items: [{ menuItemId, qty (1–20) }] }` (1–30 lines, each dish once, no other fields: prices and totals from the client are refused) | `201 { order, restaurant: { name, slug, logoUrl } }` | `400`, `401 DEVICE_REQUIRED` / `DEVICE_UNKNOWN`, `404 RESTAURANT_NOT_FOUND`, `409 NOT_ACCEPTING_ORDERS`, `409 TOO_MANY_OPEN_ORDERS` (2 open), `409 MENU_CHANGED` (dish gone or from another café), `409 ITEM_UNAVAILABLE` (names the sold-out dishes), `409 ORDER_IN_PROGRESS` (double tap), `429` |
+| `GET /api/public/orders/:id` | Device (must own it) | — | `200 { order, restaurant }` | `400`, `401`, `404 ORDER_NOT_FOUND` (also for someone else's order) |
+
+`order` = `{ id, orderNumber, customerName, items: [{ name, price, qty }], total, status, paymentMethod, createdAt, readyAt, paidAt, cancelledAt }` (no restaurant, device or menu item ids). Placing an order takes a 10-second lock on the device (`Device.orderLockUntil`), so a double tap or two tabs create one order and cannot get past the 2-open-orders limit; the request releases only its own lock. The order number comes from `DailyCounter` (one atomic `$inc` per order, business day in `Asia/Kolkata`) and a unique index on `(restaurantId, businessDate, orderNumber)`; a number may be skipped if saving then fails. The web app registers a device only when the phone places its first order (viewing the menu sends nothing), keeps `deviceId`, the first name and the last 5 order ids (per café) in `localStorage`, and retries once with a new device if the saved one is unknown. Until sockets arrive (step 1.6) the order status page checks again when the customer returns to it or taps Check status.
 
 Each signature is for exactly one photo. It covers `allowed_formats=jpg,jpeg,png,webp`, `overwrite=false`, `public_id=scanserve/<NODE_ENV>/<restaurantId>/<kind>/<random UUID>` (the server picks the id, so a reused signature can only send the same photo again), `timestamp` and `transformation=c_limit,w_1600,h_1600,q_auto:good,f_webp` (on arrival every photo is shrunk to at most 1600px, compressed and stored as WebP, which keeps logo transparency; Cloudinary may keep a gray-only photo as JPG). The signature cannot fix which Cloudinary endpoint is used (image, video, raw, auto are in the URL, not signed), so the signed `allowed_formats` is what refuses other file types everywhere; there is deliberately no `format` param, because with it Cloudinary converts other types instead of refusing them. Checked with real uploads: text files are refused on the raw and auto endpoints, even when named `.jpg`; a reused signature returns the existing photo (`existing=true`) and cannot overwrite it. The web app accepts only JPG, PNG and WebP up to 5 MB. Delivery URLs use `f_auto,q_auto` and one size per kind (dish 640×480, cover 1600×700, logo 256×256), which keeps bandwidth low on the free plan (25 credits a month; 1 credit = 1 GB stored or 1 GB delivered or 1,000 transformations).
 

@@ -37,15 +37,15 @@ Build in this order. Each step should run in the browser before moving on.
 - [x] QR poster page: QR for `<site>/m/<slug>`, printable
 
 ### 1.4 Customer menu and device
-- [ ] `Device` model; `POST /api/devices`; `useDevice` hook saves `deviceId` and `name` in `localStorage`
+- [x] `Device` model; `POST /api/devices` (server-made IDs); `useDevice` hook saves `deviceId` and `name` in `localStorage` (registered on the first order)
 - [x] `GET /api/public/:slug/menu`; customer menu page with category tabs, veg dot, sold-out greyed (with the redesign: hero, photo cards)
 - [x] Cart with a sticky bottom bar (`CartContext`), quantity +/− (plus an order panel on desktop)
 
 ### 1.5 Orders
-- [ ] `Order` and `DailyCounter` models; `counter.service.js` (atomic `$inc`, Asia/Kolkata date)
-- [ ] `POST /api/public/:slug/orders`: server recalculates prices, rejects sold-out items, max 2 open orders per device
-- [ ] "What should we call you?" asked once before the first order (skip → "Guest")
-- [ ] Order status page `/m/:slug/order/:orderId` showing number, items, total, status
+- [x] `Order` and `DailyCounter` models; `counter.service.js` (atomic `$inc`, Asia/Kolkata date)
+- [x] `POST /api/public/:slug/orders`: server recalculates prices, rejects sold-out items, max 2 open orders per device (device lock stops double taps)
+- [x] "What should we call you?" asked once before the first order (skip → "Guest")
+- [x] Order status page `/m/:slug/order/:orderId` showing number, items, total, status (Check status button until sockets in 1.6)
 
 ### 1.6 Live kitchen
 - [ ] Socket.io server with `kitchen:<restaurantId>` (JWT) and `device:<deviceId>` rooms
