@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ORDER_STATUSES } from '../models/Order.js';
 import { nameSchema, objectId } from './common.js';
 
 // Rules.md section 5: at most 20 of one dish and 30 different dishes per order.
@@ -35,5 +36,17 @@ export const placeOrderSchema = z
         (lines) => new Set(lines.map((line) => line.menuItemId)).size === lines.length,
         'Each dish can be in the order only once',
       ),
+  })
+  .strict();
+
+// GET /api/orders?status=new or ?status=new,ready — which orders the kitchen board loads.
+export const kitchenOrdersQuerySchema = z
+  .object({
+    status: z
+      .string()
+      .max(40)
+      .transform((value) => value.split(',').map((part) => part.trim()))
+      .pipe(z.array(z.enum(ORDER_STATUSES)).min(1).max(ORDER_STATUSES.length))
+      .default(['new']),
   })
   .strict();

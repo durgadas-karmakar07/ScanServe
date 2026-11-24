@@ -2,9 +2,11 @@ import http from 'node:http';
 import { app } from './app.js';
 import { env } from './config/env.js';
 import { connectDb, disconnectDb } from './config/db.js';
+import { attachSocketServer } from './socket/index.js';
 
-// A plain http server (instead of app.listen) so Socket.io can share it in step 1.6.
+// A plain http server (instead of app.listen) so Socket.io shares the same port.
 const server = http.createServer(app);
+const io = attachSocketServer(server);
 
 server.on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
@@ -18,7 +20,8 @@ server.on('error', (err) => {
 // Render sends SIGTERM on every deploy; Ctrl+C sends SIGINT. Close the DB connection cleanly.
 function shutdown(signal) {
   console.info(`${signal} received, shutting down`);
-  server.close(async () => {
+  // io.close() ends the open live connections and then closes the http server too.
+  io.close(async () => {
     await disconnectDb();
     process.exit(0);
   });

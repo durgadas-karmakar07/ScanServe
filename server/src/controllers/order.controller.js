@@ -1,6 +1,7 @@
+import mongoose from 'mongoose';
 import { Order } from '../models/Order.js';
 import { Restaurant } from '../models/Restaurant.js';
-import { placeOrder } from '../services/order.service.js';
+import { changeOrderStatus, placeOrder } from '../services/order.service.js';
 import { AppError } from '../utils/AppError.js';
 
 // The café details the order status page shows. No UPI ID yet (paying arrives with step 1.7).
@@ -28,4 +29,40 @@ export async function getMyOrder(req, res) {
 
   const restaurant = await Restaurant.findById(order.restaurantId);
   res.json({ order: order.toCustomer(), restaurant: restaurantForOrder(restaurant) });
+}
+
+// ---- Kitchen (owner login): orders are always looked up with the token's restaurantId ----
+
+// The kitchen board can show many orders at once; more than this means something is stuck.
+const KITCHEN_LIMIT = 100;
+
+// GET /api/orders?status=new — the kitchen board, oldest first.
+export async function getKitchenOrders(req, res) {
+  const orders = await Order.find({
+    restaurantId: req.auth.restaurantId,
+    status: mongoose.trusted({ $in: req.valid.query.status }),
+  })
+    .sort({ createdAt: 1 })
+    .limit(KITCHEN_LIMIT);
+  res.json({ orders: orders.map((order) => order.toKitchen()) });
+}
+
+// PATCH /api/orders/:id/ready — the one kitchen tap.
+export async function markOrderReady(req, res) {
+  const order = await changeOrderStatus({
+    restaurantId: req.auth.restaurantId,
+    orderId: req.valid.params.id,
+    status: 'ready',
+  });
+  res.json({ order: order.toKitchen() });
+}
+
+// PATCH /api/orders/:id/cancel — the café cannot make an order (asked to confirm first).
+export async function cancelOrder(req, res) {
+  const order = await changeOrderStatus({
+    restaurantId: req.auth.restaurantId,
+    orderId: req.valid.params.id,
+    status: 'cancelled',
+  });
+  res.json({ order: order.toKitchen() });
 }

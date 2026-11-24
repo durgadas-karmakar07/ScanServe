@@ -59,4 +59,19 @@ orderSchema.methods.toCustomer = function toCustomer() {
   };
 };
 
+// What the kitchen screen shows: who, what and when. Prices are included for the total only.
+orderSchema.methods.toKitchen = function toKitchen() {
+  return {
+    id: this.id,
+    orderNumber: this.orderNumber,
+    customerName: this.customerName,
+    items: this.items.map(({ name, price, qty }) => ({ name, price, qty })),
+    total: this.total,
+    status: this.status,
+    createdAt: this.createdAt,
+    readyAt: this.readyAt,
+    cancelledAt: this.cancelledAt,
+  };
+};
+
 export const Order = mongoose.model('Order', orderSchema);

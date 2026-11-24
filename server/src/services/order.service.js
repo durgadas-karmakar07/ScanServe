@@ -3,6 +3,7 @@ import { Device } from '../models/Device.js';
 import { MenuItem } from '../models/MenuItem.js';
 import { OPEN_ORDER_STATUSES, Order } from '../models/Order.js';
 import { Restaurant } from '../models/Restaurant.js';
+import { emitToDevice, emitToKitchen } from '../socket/emit.js';
 import { AppError } from '../utils/AppError.js';
 import { businessDate, nextOrderNumber } from './counter.service.js';
 
@@ -113,8 +114,56 @@ export async function placeOrder({ slug, deviceId, customerName, lines }) {
       total,
     });
     await Device.updateOne({ deviceId }, { $set: { name: customerName, lastSeenAt: now } });
+    emitToKitchen(restaurant._id, 'order:new', order.toKitchen());
     return { order, restaurant };
   } finally {
     await unlockDevice(deviceId, lockUntil);
   }
+}
+
+// Rules.md section 5: the only status changes allowed are new -> ready -> paid and
+// new|ready -> cancelled (paid arrives with step 1.7). Each target lists the statuses it may
+// come from.
+const ALLOWED_FROM = {
+  ready: ['new'],
+  cancelled: ['new', 'ready'],
+};
+const TIME_FIELD = { ready: 'readyAt', cancelled: 'cancelledAt' };
+const STATUS_WORDS = { new: 'new', ready: 'ready', paid: 'paid', cancelled: 'cancelled' };
+
+// Tells the kitchen screens and the customer's phone what changed. The phone refetches its
+// order over REST; these events only say "look again".
+function announceStatus(order) {
+  const event = order.status === 'ready' ? 'order:ready' : 'order:cancelled';
+  const payload =
+    order.status === 'ready'
+      ? { orderId: order.id, orderNumber: order.orderNumber }
+      : { orderId: order.id };
+  emitToKitchen(order.restaurantId, event, payload);
+  emitToDevice(order.deviceId, event, payload);
+}
+
+// Every order status change goes through here. One atomic update that only matches allowed
+// starting statuses, so a Ready and a Cancel tapped at the same moment cannot both win. Doing
+// the same thing twice (a double tap) is harmless and returns the order unchanged.
+export async function changeOrderStatus({ restaurantId, orderId, status }) {
+  const order = await Order.findOneAndUpdate(
+    { _id: orderId, restaurantId, status: trusted({ $in: ALLOWED_FROM[status] }) },
+    { $set: { status, [TIME_FIELD[status]]: new Date() } },
+    { returnDocument: 'after' },
+  );
+  if (order) {
+    announceStatus(order);
+    return order;
+  }
+
+  // Nothing changed: the order is missing (or another café's), already done, or not allowed.
+  const current = await Order.findOne({ _id: orderId, restaurantId });
+  if (!current) throw new AppError(404, 'ORDER_NOT_FOUND', 'Order not found.');
+  if (current.status === status) return current;
+  throw new AppError(
+    409,
+    'INVALID_STATUS_CHANGE',
+    `Order #${current.orderNumber} is already ${STATUS_WORDS[current.status]}.`,
+  );
 }
