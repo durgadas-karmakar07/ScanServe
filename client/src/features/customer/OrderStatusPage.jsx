@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
-import { getMyOrder } from '../../api/orders.js';
+import { getMyOrder, markMyOrderPaid } from '../../api/orders.js';
 import Alert from '../../components/ui/Alert.jsx';
 import Badge from '../../components/ui/Badge.jsx';
 import Button from '../../components/ui/Button.jsx';
@@ -18,6 +18,7 @@ import LinkButton from '../../components/ui/LinkButton.jsx';
 import { useSocket } from '../../hooks/useSocket.js';
 import { readDeviceId } from '../../lib/deviceStorage.js';
 import { formatRupees } from '../../lib/format.js';
+import PayPanel from './PayPanel.jsx';
 
 // Status in colour and words (Design.md: never colour alone).
 const STATUS = {
@@ -33,7 +34,7 @@ const STATUS = {
     badge: 'Ready',
     tone: 'success',
     title: 'Ready, please collect',
-    text: 'Show this order number at the counter.',
+    text: 'Collect it at the counter, then pay below.',
     Icon: CircleCheckBig,
     box: 'border-success bg-success/10',
   },
@@ -113,7 +114,17 @@ export default function OrderStatusPage() {
     'order:cancelled': ({ orderId: changedId }) => {
       if (changedId === orderId) setCheckCount((count) => count + 1);
     },
+    // The owner marked it paid at the counter.
+    'order:paid': ({ orderId: changedId }) => {
+      if (changedId === orderId) setCheckCount((count) => count + 1);
+    },
   });
+
+  // The customer says they paid; the answer is the updated order.
+  const handlePaid = async (method) => {
+    const { order, restaurant } = await markMyOrderPaid(orderId, deviceId, method);
+    setState({ status: 'ready', order, restaurant, error: null });
+  };
 
   const checkAgain = () => {
     if (isChecking) return;
@@ -165,7 +176,11 @@ export default function OrderStatusPage() {
   const { order, restaurant } = state;
   const status = STATUS[order.status] ?? STATUS.new;
   const menuPath = `/m/${restaurant?.slug ?? slug}`;
-  const isOpen = order.status === 'new' || order.status === 'ready';
+  const isNew = order.status === 'new';
+  const title =
+    order.status === 'paid'
+      ? `Paid ${order.paymentMethod === 'cash' ? 'in cash' : 'by UPI'}. Thank you!`
+      : status.title;
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-[480px] flex-col gap-5 px-4 pt-4 pb-10">
@@ -190,13 +205,16 @@ export default function OrderStatusPage() {
         <status.Icon size={32} className="mt-1 shrink-0" aria-hidden="true" />
         <div className="flex min-w-0 flex-col items-start gap-1">
           <Badge tone={status.tone}>{status.badge}</Badge>
-          <p className="font-display text-h2 font-bold">{status.title}</p>
+          <p className="font-display text-h2 font-bold">{title}</p>
           <p className="text-text-muted">{status.text}</p>
         </div>
       </div>
 
       {state.error && <Alert>Could not check for a new status. {state.error.message}</Alert>}
-      {isOpen && (
+      {order.status === 'ready' && restaurant && (
+        <PayPanel order={order} restaurant={restaurant} onPaid={handlePaid} />
+      )}
+      {isNew && (
         <Button variant="secondary" aria-disabled={isChecking || undefined} onClick={checkAgain}>
           <RotateCw size={24} className={isChecking ? 'animate-spin' : ''} aria-hidden="true" />
           {isChecking ? 'Checking…' : 'Check status'}
@@ -226,7 +244,7 @@ export default function OrderStatusPage() {
         </div>
       </Card>
 
-      {isOpen && <p className="text-text-muted">Pay at the counter after eating: UPI or cash.</p>}
+      {isNew && <p className="text-text-muted">You pay after eating: UPI or cash.</p>}
       <LinkButton to={menuPath}>Order something else</LinkButton>
     </main>
   );

@@ -11,6 +11,7 @@ import OwnerLayout from './features/owner/OwnerLayout.jsx';
 import QrPoster from './features/owner/QrPoster.jsx';
 import RegisterPage from './features/owner/RegisterPage.jsx';
 import SettingsPage from './features/owner/SettingsPage.jsx';
+import UnpaidPage from './features/owner/UnpaidPage.jsx';
 
 export default function App() {
   return (
@@ -26,6 +27,7 @@ export default function App() {
         <Route path="/owner" element={<OwnerLayout />}>
           <Route index element={<Navigate to="menu" replace />} />
           <Route path="menu" element={<MenuEditor />} />
+          <Route path="unpaid" element={<UnpaidPage />} />
           <Route path="qr" element={<QrPoster />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>

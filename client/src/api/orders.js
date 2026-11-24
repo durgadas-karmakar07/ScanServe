@@ -23,3 +23,24 @@ export const markOrderReady = (token, orderId) =>
 
 export const cancelOrder = (token, orderId) =>
   request(`/api/orders/${encodeURIComponent(orderId)}/cancel`, { method: 'PATCH', token });
+
+// ---- Paying (step 1.7) ----
+
+// The customer says they paid: method 'upi' or 'cash'. Only after the order is ready.
+export const markMyOrderPaid = (orderId, deviceId, method) =>
+  request(`/api/public/orders/${encodeURIComponent(orderId)}/paid`, {
+    method: 'POST',
+    deviceId,
+    body: { method },
+  });
+
+// Owner: ready orders that are not paid yet, oldest first.
+export const getUnpaidOrders = (token, options) =>
+  request('/api/orders?status=ready', { token, ...options });
+
+export const markOrderPaid = (token, orderId, method) =>
+  request(`/api/orders/${encodeURIComponent(orderId)}/mark-paid`, {
+    method: 'PATCH',
+    token,
+    body: { method },
+  });
