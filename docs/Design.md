@@ -106,6 +106,7 @@ Radius follows hierarchy: full-bleed hero 0, cards and photos 16px, inputs 12px,
 | Hero (customer) | Full-bleed cover photo under a chalkboard-green gradient, logo in a white circle, café name (Display), tagline, Open / Paused badge; no photo → plain chalkboard with a faint pattern of the café's initial |
 | Category tabs | Sticky under the hero, horizontal scroll, active tab has a marigold underline |
 | Cart bar | Sticky bottom bar in `primary`: item count and total on the left, accent "View order" pill on the right; appears when the cart is not empty |
+| Pay panel (customer) | Shown once the order is ready: total in Display size, primary "Pay with UPI" (opens the UPI app), "Pay ₹X to <UPI ID>" with Copy UPI ID, then secondary "I've paid by UPI" and "Paying cash" |
 | Photo picker | Preview (4:3 or circle for logo), "Add photo" / "Change" / "Remove", upload progress; JPG, PNG or WebP up to 5 MB |
 | Badge | Pill, 14px / 600: New (`info`), Ready (`success`), Paid / Sold out (`border` bg), Cancelled (`danger`) |
 | Toast | Bottom of screen, 3 seconds, one line of plain language |
@@ -142,7 +143,7 @@ Kitchen (/kitchen, tablet landscape, dark)
 └──────────────┴──────────────┴──────────────┘
 ```
 
-Owner area: tabs **Kitchen · Menu · QR poster · Settings** (Kitchen opens the full-screen `/kitchen` board; Unpaid arrives in 1.7); bottom tabs on phones, side menu on desktop with the café's logo and name at the top.
+Owner area: tabs **Kitchen · Unpaid · Menu · QR poster · Settings** (Kitchen opens the full-screen `/kitchen` board); bottom tabs on phones, side menu on desktop with the café's logo and name at the top.
 
 ## 6. Responsive breakpoints
 

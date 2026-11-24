@@ -25,7 +25,7 @@ In a small café with two or three people, the owner usually cooks, takes orders
 
 It is built for real tiny cafés, starting with one in Durgapur, West Bengal.
 
-**Live:** [scanserve-cafe.netlify.app](https://scanserve-cafe.netlify.app). Work in progress: café owners can create an account, build their menu and print a QR poster, and customers can open the menu from the QR (photos, categories, cart), place an order with no login, and the kitchen screen shows it live with a sound; one tap on Ready tells the customer's phone. Paying after eating comes next. `/health` shows a setup check. The free API server sleeps when idle, so the first visit can take up to a minute.
+**Live:** [scanserve-cafe.netlify.app](https://scanserve-cafe.netlify.app). Work in progress: café owners can create an account, build their menu and print a QR poster, and customers can open the menu from the QR (photos, categories, cart), place an order with no login, and the kitchen screen shows it live with a sound; one tap on Ready tells the customer's phone, and the customer pays after eating by UPI or cash while the owner sees an unpaid list. The whole Phase 1 loop works; a final test on a real phone with the printed QR is left. `/health` shows a setup check. The free API server sleeps when idle, so the first visit can take up to a minute.
 
 ## Features
 
@@ -35,13 +35,13 @@ It is built for real tiny cafés, starting with one in Durgapur, West Bengal.
 | Menu management with categories, veg tag and sold-out switch | 1 | Done |
 | Printable QR poster for the menu board | 1 | Done |
 | Customer menu from the QR: café cover and logo, category tabs, dish cards, cart | 1 | Done |
-| Dish photos, café cover photo and logo (Cloudinary) | 1 | Built and tested; live once the Cloudinary keys are set on the server |
+| Dish photos, café cover photo and logo (Cloudinary) | 1 | Done |
 | Customer ordering with no login: name asked once, remembered on the phone | 1 | Done |
 | Daily order numbers (1, 2, 3...) | 1 | Done |
 | Live kitchen screen with one-tap **Ready** and **Cancel** | 1 | Done |
 | Live order status on the customer's phone | 1 | Done |
-| Pay after eating: UPI app opens with the amount filled in, or pay cash | 1 | Planned |
-| Owner's unpaid list | 1 | Planned |
+| Pay after eating: UPI app opens with the amount filled in, or pay cash | 1 | Done |
+| Owner's unpaid list, updated live | 1 | Done |
 | Voice kitchen: orders read aloud, customer names called | 2 | Planned |
 | Daily hisab (accounts): cash vs UPI, top dishes, charts | 3 | Planned |
 | Hindi, Bengali and English, installable PWA, push notifications | 4 | Planned |
@@ -49,7 +49,15 @@ It is built for real tiny cafés, starting with one in Durgapur, West Bengal.
 
 ## Screenshots
 
-Screenshots and a short demo GIF will be added when Phase 1 is complete.
+Screens from a test café: phones for customers and the owner, a tablet for the kitchen.
+
+| Customer menu | Ready, then pay after eating | Owner: unpaid list |
+|---|---|---|
+| <img src="docs/screenshots/customer-menu.jpg" alt="Customer menu on a phone: café name, category tabs, dish cards with Add buttons and the cart bar showing 2 items for ₹140" width="260"> | <img src="docs/screenshots/order-ready-pay.jpg" alt="Order status: Ready, please collect, and the pay panel with Pay with UPI, I have paid by UPI and Paying cash" width="260"> | <img src="docs/screenshots/owner-unpaid.jpg" alt="Owner unpaid list: 3 orders to collect, ₹560, each with Paid UPI and Paid cash buttons" width="260"> |
+
+**Kitchen screen:** new orders appear live with a sound; one big **Ready** button per order.
+
+<img src="docs/screenshots/kitchen.jpg" alt="Dark kitchen board with three order cards, each with a big order number, the customer name, the items and a green Ready button" width="535">
 
 ## How it works
 
@@ -131,7 +139,10 @@ npm run dev             # http://localhost:5173
 ### 4. Try it
 1. Open `http://localhost:5173/owner/register` and create a café.
 2. Add a few dishes in the menu editor.
-3. Open `http://localhost:5173/kitchen` in one window and `http://localhost:5173/m/<your-cafe-slug>` in another (or on your phone), then place an order.
+3. Open `http://localhost:5173/kitchen` in the same browser (it uses your owner login) and `http://localhost:5173/m/<your-cafe-slug>` in another window, then place an order. Tap **Turn on sound** on the kitchen screen once so new orders ring.
+4. Tap **Ready** on the kitchen screen; the customer page changes by itself and shows the pay panel. Unpaid orders are under **Unpaid** in the owner area.
+
+If the API cannot reach MongoDB, check that your computer's IP address is allowed under **Network Access** in Atlas.
 
 ### Environment variables
 

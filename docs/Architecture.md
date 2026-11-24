@@ -67,7 +67,7 @@ scanserve/
 │           │                  # OrderSummary, NameStep, CartBar, OrderStatusPage, PayPanel
 │           ├── kitchen/       # KitchenPage (live board, sound, screen kept on), OrderCard
 │           └── owner/         # AuthLayout, RegisterPage, LoginPage, OwnerLayout (tabs),
-│               │              # QrPoster, SettingsPage, BrandingCard, UnpaidList
+│               │              # QrPoster, SettingsPage, BrandingCard, UnpaidPage
 │               └── menu/      # MenuEditor, MenuItemRow, DishSheet, DeleteDishSheet
 └── server/
     ├── .env.example
@@ -104,7 +104,7 @@ scanserve/
 | `/owner/menu` | Menu editor: add, edit, delete dishes, sold-out switch | Owner |
 | `/owner/qr` | Printable QR poster for `<site>/m/<slug>` | Owner |
 | `/owner/settings` | Café name, UPI ID, taking orders on/off | Owner |
-| `/owner/unpaid` | Unpaid list (step 1.7) | Owner |
+| `/owner/unpaid` | Unpaid list: ready orders not paid yet, live, with Paid UPI / Paid cash | Owner |
 | `/kitchen` | Live kitchen board | Owner / cook (logged in on the kitchen device) |
 
 ## 5. Database schema (MongoDB, Mongoose)
@@ -165,6 +165,15 @@ All responses are JSON. Errors: `{ "error": { "code": "ORDER_NOT_FOUND", "messag
 | `POST /api/uploads/signature` | Owner | `{ kind: 'dish' | 'cover' | 'logo' }` | `200 { cloudName, apiKey, signature, params }`; the browser posts the file with these to `https://api.cloudinary.com/v1_1/<cloud>/image/upload` | `400`, `401`, `429 RATE_LIMITED` (per café 60 an hour and 100 a day, per network 120 a day, 300 a day across all cafés; only signatures given out count; the daily counts live in MongoDB so a sleeping or restarted server does not reset them), `503 PHOTOS_NOT_CONFIGURED` |
 | `GET /api/public/:slug/menu` | — | — | `200 { restaurant: { name, slug, tagline, isAcceptingOrders, coverUrl, logoUrl }, items: [{ id, name, description, category, price, isVeg, isAvailable, photoUrl }] }` (sold-out dishes included; no UPI ID, no internal ids) | `400` bad slug, `404 RESTAURANT_NOT_FOUND` |
 
+**Pay after eating (step 1.7, 2026-11-24)**
+
+| Endpoint | Auth | Body | Success | Errors |
+|---|---|---|---|---|
+| `POST /api/public/orders/:id/paid` | Device (must own it) | `{ method: 'upi' | 'cash' }` (no amount: it is always the order total) | `200 { order, restaurant }` with `status: 'paid'`, `paymentMethod`; repeating is harmless | `400`, `401`, `404 ORDER_NOT_FOUND` (also another phone's order), `409 INVALID_STATUS_CHANGE` ("is not ready yet", "was cancelled") |
+| `PATCH /api/orders/:id/mark-paid` | Owner | `{ method: 'upi' | 'cash' }` | `200 { order }` (`paidMarkedBy: 'owner'`) | same as above |
+
+Paying is allowed only from `ready` (`new → ready → paid`; a paid order cannot be cancelled), through the same `changeOrderStatus` function with `scope: { deviceId }` for the phone and `{ restaurantId }` for the owner. Both emit `order:paid { orderId, paymentMethod, paidMarkedBy }` to the café's kitchen room and the phone. The customer's order responses now include the café's `upiId` (the public menu still does not). The pay panel builds `upi://pay?pa=<UPI ID>&pn=<café>&am=<total>.00&cu=INR&tn=Order <n>` with `URLSearchParams` (spaces as `%20`, `@` kept), shows "Pay ₹X to <UPI ID>" with a copy button as the fallback, and has separate "I've paid by UPI" and "Paying cash" taps, so an order is not marked paid if the UPI app is closed without paying. The unpaid list uses `GET /api/orders?status=ready` and updates live on `order:ready` (reload), `order:paid` and `order:cancelled` (remove).
+
 **Live kitchen (step 1.6, 2026-11-24)**
 
 | Endpoint | Auth | Body | Success | Errors |
@@ -197,7 +206,7 @@ Each signature is for exactly one photo. It covers `allowed_formats=jpg,jpeg,png
 | GET, POST | `/api/menu` | Owner | List / add dishes |
 | PATCH, DELETE | `/api/menu/:id` | Owner | Edit / delete, sold-out switch |
 | GET | `/api/orders?status=new,ready` | Owner | Kitchen board orders |
-| GET | `/api/orders/unpaid` | Owner | Today's ready-but-unpaid orders |
+| GET | `/api/orders?status=ready` | Owner | Unpaid list: ready orders not paid yet (any day, oldest first) |
 | PATCH | `/api/orders/:id/ready` | Owner | The one kitchen tap |
 | PATCH | `/api/orders/:id/cancel` | Owner | Cancel |
 | PATCH | `/api/orders/:id/mark-paid` | Owner | Owner marks paid (`upi` / `cash`) |

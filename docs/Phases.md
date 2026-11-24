@@ -55,15 +55,15 @@ Build in this order. Each step should run in the browser before moving on.
 - [x] Refetch on socket reconnect
 
 ### 1.7 Pay after eating
-- [ ] Pay panel on the order status page once the order is `ready`: total in big text
-- [ ] "Pay with UPI" button opens `upi://pay?...` (`lib/upi.js`), plus fallback text "Pay ₹X to <UPI ID>"
-- [ ] "Paying cash" button; both call `POST /api/public/orders/:id/paid` → status `paid`
-- [ ] Owner unpaid list (today's `ready` orders), with "Mark paid (UPI / cash)"
-- [ ] `order:paid` updates the kitchen and owner screens live
+- [x] Pay panel on the order status page once the order is `ready`: total in big text
+- [x] "Pay with UPI" button opens `upi://pay?...` (`lib/upi.js`), plus fallback text "Pay ₹X to <UPI ID>" (with Copy UPI ID)
+- [x] "Paying cash" button; both call `POST /api/public/orders/:id/paid` → status `paid` (UPI is confirmed with a separate "I've paid by UPI" tap after the UPI app)
+- [x] Owner unpaid list (`ready` orders not paid yet, any day, so nothing is forgotten), with "Paid UPI / Paid cash"
+- [x] `order:paid` updates the kitchen and owner screens live (and the customer's page when the owner marks it)
 
 ### 1.8 Deploy
 - [x] Backend on Render, frontend on Netlify, env vars set, CORS correct (done early, after 1.1)
-- [ ] Test on a real phone with the printed QR
+- [ ] Test on a real phone with the printed QR (developer, on the live site with mobile data; README screenshots and setup check done 2026-11-24)
 
 ### Phase 1 — Done when
 1. On a phone, scan the QR → order 2 dishes → the order appears on the kitchen screen (another device) within 2 seconds.
