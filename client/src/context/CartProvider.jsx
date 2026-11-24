@@ -30,9 +30,16 @@ export default function CartProvider({ slug, children }) {
     });
   }, []);
 
+  // After an order is placed the cart starts empty again. Storage is cleared right away, because
+  // the page moves to the order status screen before the save effect above would run.
+  const clearCart = useCallback(() => {
+    saveCart(slug, {});
+    setLines({});
+  }, [slug]);
+
   const value = useMemo(
-    () => ({ lines, setQuantity, maxQuantity: MAX_QUANTITY, maxLines: MAX_LINES }),
-    [lines, setQuantity],
+    () => ({ lines, setQuantity, clearCart, maxQuantity: MAX_QUANTITY, maxLines: MAX_LINES }),
+    [lines, setQuantity, clearCart],
   );
 
   return <CartContext value={value}>{children}</CartContext>;

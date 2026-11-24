@@ -9,7 +9,8 @@ function createError(code, message, extra = {}) {
 // Every request goes through here: it adds the base URL, JSON and auth headers, and turns any
 // failure into an Error with a `code`, the HTTP `status`, optional per-field `fields` messages,
 // and a plain-language `message` that is safe to show on screen.
-export async function request(path, { method = 'GET', body, token, signal } = {}) {
+// token: the owner's login. deviceId: a customer's phone, for their own orders.
+export async function request(path, { method = 'GET', body, token, deviceId, signal } = {}) {
   if (!API_URL) {
     throw createError('CONFIG_ERROR', 'The app is not set up: VITE_API_URL is missing.');
   }
@@ -17,6 +18,7 @@ export async function request(path, { method = 'GET', body, token, signal } = {}
   const headers = {};
   if (body) headers['Content-Type'] = 'application/json';
   if (token) headers.Authorization = `Bearer ${token}`;
+  if (deviceId) headers['X-Device-Id'] = deviceId;
 
   let response;
   try {

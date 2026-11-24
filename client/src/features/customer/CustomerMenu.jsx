@@ -1,5 +1,7 @@
-import { LoaderCircle, RotateCw } from 'lucide-react';
+import { ChevronRight, LoaderCircle, ReceiptText, RotateCw } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router';
+import { placeOrder as sendOrder } from '../../api/orders.js';
 import { getPublicMenu } from '../../api/public.js';
 import Alert from '../../components/ui/Alert.jsx';
 import Button from '../../components/ui/Button.jsx';
@@ -7,8 +9,10 @@ import Card from '../../components/ui/Card.jsx';
 import Sheet from '../../components/ui/Sheet.jsx';
 import { useActiveSection } from '../../hooks/useActiveSection.js';
 import { useCart } from '../../hooks/useCart.js';
+import { useDevice } from '../../hooks/useDevice.js';
 import { useToast } from '../../hooks/useToast.js';
 import { groupByCategory } from '../../lib/menu.js';
+import { latestRecentOrder, rememberOrder } from '../../lib/orderHistory.js';
 import CartBar from './CartBar.jsx';
 import CategoryTabs from './CategoryTabs.jsx';
 import DishCard from './DishCard.jsx';
@@ -17,6 +21,10 @@ import OrderSummary from './OrderSummary.jsx';
 
 const SECTION_PREFIX = 'category';
 const LOADING = { status: 'loading', restaurant: null, items: [], error: null };
+// The phone's device ID was not accepted: get a new one and try once more.
+const DEVICE_ERRORS = ['DEVICE_REQUIRED', 'DEVICE_UNKNOWN'];
+// The menu changed since it was loaded: reload it so the cart and dishes are up to date.
+const MENU_ERRORS = ['ITEM_UNAVAILABLE', 'MENU_CHANGED', 'NOT_ACCEPTING_ORDERS'];
 
 // The one place cart changes are read out. A second copy lives inside the order sheet, because
 // an open modal sheet hides the rest of the page from screen readers.
@@ -29,8 +37,11 @@ function CartAnnouncer({ message }) {
 }
 
 export default function CustomerMenu({ slug }) {
-  const { lines, setQuantity, maxQuantity, maxLines } = useCart();
+  const { lines, setQuantity, clearCart, maxQuantity, maxLines } = useCart();
+  const { name: customerName, saveName, ensureDeviceId } = useDevice();
   const { showToast } = useToast();
+  const navigate = useNavigate();
+  const [recentOrder] = useState(() => latestRecentOrder(slug));
   const [menu, setMenu] = useState(LOADING);
   const [attempt, setAttempt] = useState(0);
   const [isOrderOpen, setIsOrderOpen] = useState(false);
@@ -120,6 +131,32 @@ export default function CustomerMenu({ slug }) {
       ?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'start' });
   };
 
+  // Sends the cart as an order. On success the cart empties and the order status page opens.
+  // A failure is thrown back to OrderSummary, which shows its message.
+  const placeOrder = async (name) => {
+    const order = {
+      customerName: name,
+      items: cart.entries.map(({ item, quantity }) => ({ menuItemId: item.id, qty: quantity })),
+    };
+    const send = async (isFresh) => sendOrder(slug, await ensureDeviceId({ isFresh }), order);
+    try {
+      let result;
+      try {
+        result = await send(false);
+      } catch (err) {
+        if (!DEVICE_ERRORS.includes(err.code)) throw err;
+        result = await send(true);
+      }
+      rememberOrder(slug, result.order);
+      clearCart();
+      navigate(`/m/${slug}/order/${result.order.id}`);
+    } catch (err) {
+      // Reload the menu in place (no loading screen): sold-out dishes then leave the cart.
+      if (MENU_ERRORS.includes(err.code)) setAttempt((count) => count + 1);
+      throw err;
+    }
+  };
+
   if (menu.status === 'loading') {
     return (
       <div aria-busy="true">
@@ -162,7 +199,15 @@ export default function CustomerMenu({ slug }) {
   const { restaurant } = menu;
   const isOrderingOpen = restaurant.isAcceptingOrders;
   const orderSummary = (
-    <OrderSummary cart={cart} maxQuantity={maxQuantity} onChangeQuantity={changeQuantity} />
+    <OrderSummary
+      cart={cart}
+      maxQuantity={maxQuantity}
+      isOrderingOpen={isOrderingOpen}
+      customerName={customerName}
+      onChangeQuantity={changeQuantity}
+      onSaveName={saveName}
+      onPlaceOrder={placeOrder}
+    />
   );
 
   return (
@@ -178,6 +223,19 @@ export default function CustomerMenu({ slug }) {
 
       <div className="mx-auto max-w-[1200px] px-4 pt-6 pb-32 lg:grid lg:grid-cols-[1fr_340px] lg:gap-8 lg:pb-12">
         <main ref={mainRef} tabIndex={-1} className="flex flex-col gap-8 outline-none">
+          {recentOrder && (
+            <Link
+              to={`/m/${slug}/order/${recentOrder.id}`}
+              className="flex min-h-13 items-center gap-3 rounded-card border border-border bg-surface p-4 font-semibold hover:bg-primary-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            >
+              <ReceiptText size={24} className="shrink-0 text-primary" aria-hidden="true" />
+              <span className="min-w-0 flex-1">
+                Your order <span className="tabular-nums">#{recentOrder.orderNumber}</span>: see its
+                status
+              </span>
+              <ChevronRight size={24} className="shrink-0" aria-hidden="true" />
+            </Link>
+          )}
           {!isOrderingOpen && (
             <Alert>This café is not taking orders right now. You can still look at the menu.</Alert>
           )}
