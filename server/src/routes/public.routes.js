@@ -1,5 +1,10 @@
 import { Router } from 'express';
-import { createOrder, getMyOrder, markMyOrderPaid } from '../controllers/order.controller.js';
+import {
+  createOrder,
+  getMyOpenOrders,
+  getMyOrder,
+  markMyOrderPaid,
+} from '../controllers/order.controller.js';
 import { getPublicMenu } from '../controllers/public.controller.js';
 import { orderDeviceLimiter, orderIpLimiter } from '../middleware/rateLimit.js';
 import { requireDevice } from '../middleware/requireDevice.js';
@@ -23,6 +28,14 @@ router.post(
   orderDeviceLimiter,
   validate({ params: slugParamsSchema, body: placeOrderSchema }),
   createOrder,
+);
+
+// This phone's open orders at the café, for the links on the menu.
+router.get(
+  '/:slug/orders/mine',
+  requireDevice,
+  validate({ params: slugParamsSchema }),
+  getMyOpenOrders,
 );
 
 router.get('/orders/:id', requireDevice, validate({ params: idParamsSchema }), getMyOrder);

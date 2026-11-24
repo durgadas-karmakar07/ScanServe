@@ -17,3 +17,9 @@ export function emitToKitchen(restaurantId, event, payload) {
 export function emitToDevice(deviceId, event, payload) {
   io?.to(deviceRoom(deviceId)).emit(event, payload);
 }
+
+// After "Log out everywhere": every kitchen screen of the café must connect again, and the
+// handshake then refuses the old, revoked logins.
+export function disconnectKitchen(restaurantId) {
+  io?.in(kitchenRoom(String(restaurantId))).disconnectSockets(true);
+}

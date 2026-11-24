@@ -30,6 +30,9 @@ const orderSchema = new mongoose.Schema(
     status: { type: String, enum: ORDER_STATUSES, default: 'new' },
     paymentMethod: { type: String, enum: ['upi', 'cash', null], default: null },
     paidMarkedBy: { type: String, enum: ['customer', 'owner', null], default: null },
+    // A random id the phone sends with each checkout. If the answer is lost and the customer taps
+    // Place order again, the same id returns the order already saved instead of a second one.
+    checkoutId: { type: String },
     readyAt: { type: Date, default: null },
     paidAt: { type: Date, default: null },
     cancelledAt: { type: Date, default: null },
@@ -41,6 +44,11 @@ orderSchema.index({ restaurantId: 1, status: 1 });
 orderSchema.index({ deviceId: 1, createdAt: -1 });
 // A number is never given out twice on the same day, even if something goes wrong.
 orderSchema.index({ restaurantId: 1, businessDate: 1, orderNumber: 1 }, { unique: true });
+// One order per checkout id per phone (orders without a checkout id are not indexed).
+orderSchema.index(
+  { deviceId: 1, checkoutId: 1 },
+  { unique: true, partialFilterExpression: { checkoutId: { $type: 'string' } } },
+);
 
 // What the customer's phone sees. No restaurant, device or menu item ids.
 orderSchema.methods.toCustomer = function toCustomer() {

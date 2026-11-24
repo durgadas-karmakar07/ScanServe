@@ -47,8 +47,9 @@ const unlockDevice = (deviceId, lockUntil) =>
   Device.updateOne({ deviceId, orderLockUntil: lockUntil }, { $set: { orderLockUntil: null } });
 
 // Places an order from the customer's cart. Prices, names and the total always come from the
-// menu in the database; the phone only says which dishes and how many.
-export async function placeOrder({ slug, deviceId, customerName, lines }) {
+// menu in the database; the phone only says which dishes and how many. checkoutId (optional)
+// makes a repeated tap safe: the same id returns the order already saved (isRepeat: true).
+export async function placeOrder({ slug, deviceId, customerName, lines, checkoutId }) {
   const restaurant = await Restaurant.findOne({ slug });
   if (!restaurant) {
     throw new AppError(404, 'RESTAURANT_NOT_FOUND', 'This café was not found. Check the QR code.');
@@ -60,7 +61,14 @@ export async function placeOrder({ slug, deviceId, customerName, lines }) {
   const now = new Date();
   const lockUntil = await lockDevice(deviceId, now);
   try {
+    if (checkoutId) {
+      const saved = await Order.findOne({ deviceId, checkoutId });
+      if (saved) return { order: saved, restaurant, isRepeat: true };
+    }
+
+    // Counted per café: an unpaid order at another café does not block this one.
     const openOrders = await Order.countDocuments({
+      restaurantId: restaurant._id,
       deviceId,
       status: trusted({ $in: OPEN_ORDER_STATUSES }),
     });
@@ -112,10 +120,11 @@ export async function placeOrder({ slug, deviceId, customerName, lines }) {
       businessDate: date,
       items,
       total,
+      ...(checkoutId ? { checkoutId } : {}),
     });
     await Device.updateOne({ deviceId }, { $set: { name: customerName, lastSeenAt: now } });
     emitToKitchen(restaurant._id, 'order:new', order.toKitchen());
-    return { order, restaurant };
+    return { order, restaurant, isRepeat: false };
   } finally {
     await unlockDevice(deviceId, lockUntil);
   }
@@ -161,9 +170,14 @@ function announceStatus(order) {
 // scope says whose order it must be, built in code from the login or the device, never from the
 // request: { restaurantId } for the café, { deviceId } for the customer's phone.
 // changes: extra fields for this change (paymentMethod and paidMarkedBy when paying).
-export async function changeOrderStatus({ orderId, status, scope, changes = {} }) {
+// onlyFrom: a narrower list of starting statuses for one screen, e.g. the kitchen's Cancel is
+// only for orders not made yet, so a stale Cancel cannot undo a Ready.
+export async function changeOrderStatus({ orderId, status, scope, changes = {}, onlyFrom }) {
+  const allowed = onlyFrom
+    ? onlyFrom.filter((from) => ALLOWED_FROM[status].includes(from))
+    : ALLOWED_FROM[status];
   const order = await Order.findOneAndUpdate(
-    { _id: orderId, ...scope, status: trusted({ $in: ALLOWED_FROM[status] }) },
+    { _id: orderId, ...scope, status: trusted({ $in: allowed }) },
     { $set: { status, [TIME_FIELD[status]]: new Date(), ...changes } },
     { returnDocument: 'after' },
   );

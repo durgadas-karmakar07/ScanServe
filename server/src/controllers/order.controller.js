@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { Order } from '../models/Order.js';
+import { OPEN_ORDER_STATUSES, Order } from '../models/Order.js';
 import { Restaurant } from '../models/Restaurant.js';
 import { changeOrderStatus, placeOrder } from '../services/order.service.js';
 import { AppError } from '../utils/AppError.js';
@@ -17,14 +17,35 @@ const restaurantForOrder = (restaurant) =>
     : null;
 
 // POST /api/public/:slug/orders — a customer places an order from their phone.
+// A repeated checkout id answers 200 with the order already saved instead of making a new one.
 export async function createOrder(req, res) {
-  const { order, restaurant } = await placeOrder({
+  const { order, restaurant, isRepeat } = await placeOrder({
     slug: req.valid.params.slug,
     deviceId: req.device.deviceId,
     customerName: req.valid.body.customerName,
     lines: req.valid.body.items,
+    checkoutId: req.valid.body.checkoutId,
   });
-  res.status(201).json({ order: order.toCustomer(), restaurant: restaurantForOrder(restaurant) });
+  res
+    .status(isRepeat ? 200 : 201)
+    .json({ order: order.toCustomer(), restaurant: restaurantForOrder(restaurant) });
+}
+
+// GET /api/public/:slug/orders/mine — this phone's open orders at this café (waiting or ready,
+// not paid), newest first, so the menu can link to each one, even after the phone forgot them.
+export async function getMyOpenOrders(req, res) {
+  const restaurant = await Restaurant.findOne({ slug: req.valid.params.slug });
+  if (!restaurant) {
+    throw new AppError(404, 'RESTAURANT_NOT_FOUND', 'This café was not found. Check the QR code.');
+  }
+  const orders = await Order.find({
+    restaurantId: restaurant._id,
+    deviceId: req.device.deviceId,
+    status: mongoose.trusted({ $in: OPEN_ORDER_STATUSES }),
+  })
+    .sort({ createdAt: -1 })
+    .limit(10);
+  res.json({ orders: orders.map((order) => order.toCustomer()) });
 }
 
 // GET /api/public/orders/:id — only the phone that placed the order can see it. Someone else's
@@ -52,26 +73,47 @@ export async function markMyOrderPaid(req, res) {
 
 // ---- Kitchen and owner (owner login): orders are always looked up with the token's café ----
 
-// The board can show many orders at once; more than this means something is stuck.
-const KITCHEN_LIMIT = 100;
+// A list never sends more than this; count and amount always cover every matching order, and
+// hasMore tells the screen to say that some are not shown.
+const LIST_LIMIT = 200;
 
-// GET /api/orders?status=new — the kitchen board; ?status=ready — the unpaid list. Oldest first.
+// GET /api/orders?status=new — the kitchen board (oldest first);
+// ?status=ready&order=newest — the unpaid list (newest first).
 export async function getKitchenOrders(req, res) {
-  const orders = await Order.find({
-    restaurantId: req.auth.restaurantId,
-    status: mongoose.trusted({ $in: req.valid.query.status }),
-  })
-    .sort({ createdAt: 1 })
-    .limit(KITCHEN_LIMIT);
-  res.json({ orders: orders.map((order) => order.toKitchen()) });
+  const { status, order } = req.valid.query;
+  const filter = { restaurantId: req.auth.restaurantId, status: mongoose.trusted({ $in: status }) };
+  const [orders, count, totals] = await Promise.all([
+    Order.find(filter)
+      .sort({ createdAt: order === 'newest' ? -1 : 1 })
+      .limit(LIST_LIMIT),
+    Order.countDocuments(filter),
+    // Aggregation filters are not cast or sanitized by Mongoose, so the id is converted here and
+    // the statuses are the checked values from the validator.
+    Order.aggregate([
+      {
+        $match: {
+          restaurantId: new mongoose.Types.ObjectId(req.auth.restaurantId),
+          status: { $in: status },
+        },
+      },
+      { $group: { _id: null, amount: { $sum: '$total' } } },
+    ]),
+  ]);
+  res.json({
+    orders: orders.map((item) => item.toKitchen()),
+    count,
+    amount: totals[0]?.amount ?? 0,
+    hasMore: count > orders.length,
+  });
 }
 
-const changeForCafe = (req, status, changes) =>
+const changeForCafe = (req, status, { changes, onlyFrom } = {}) =>
   changeOrderStatus({
     orderId: req.valid.params.id,
     status,
     scope: { restaurantId: req.auth.restaurantId },
     changes,
+    onlyFrom,
   });
 
 // PATCH /api/orders/:id/ready — the one kitchen tap.
@@ -80,17 +122,17 @@ export async function markOrderReady(req, res) {
   res.json({ order: order.toKitchen() });
 }
 
-// PATCH /api/orders/:id/cancel — the café cannot make an order (asked to confirm first).
+// PATCH /api/orders/:id/cancel — the café cannot make an order (asked to confirm first). Only
+// for orders not made yet: a Cancel from a stale screen cannot undo a Ready (food served).
 export async function cancelOrder(req, res) {
-  const order = await changeForCafe(req, 'cancelled');
+  const order = await changeForCafe(req, 'cancelled', { onlyFrom: ['new'] });
   res.json({ order: order.toKitchen() });
 }
 
 // PATCH /api/orders/:id/mark-paid — the owner marks a ready order paid (UPI or cash).
 export async function markOrderPaid(req, res) {
   const order = await changeForCafe(req, 'paid', {
-    paymentMethod: req.valid.body.method,
-    paidMarkedBy: 'owner',
+    changes: { paymentMethod: req.valid.body.method, paidMarkedBy: 'owner' },
   });
   res.json({ order: order.toKitchen() });
 }

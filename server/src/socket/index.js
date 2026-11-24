@@ -2,6 +2,7 @@ import { Server } from 'socket.io';
 import { env } from '../config/env.js';
 import { authenticateOwner } from '../middleware/requireAuth.js';
 import { Device } from '../models/Device.js';
+import { AppError } from '../utils/AppError.js';
 import { deviceIdSchema } from '../validators/device.validators.js';
 import { deviceRoom, kitchenRoom, setSocketServer } from './emit.js';
 
@@ -28,13 +29,15 @@ export function attachSocketServer(httpServer) {
       } else {
         const parsed = deviceIdSchema.safeParse(deviceId);
         if (!parsed.success || !(await Device.exists({ deviceId: parsed.data }))) {
-          throw new Error('unknown device');
+          throw new AppError(401, 'UNAUTHORIZED', 'Unknown device');
         }
         socket.data.room = deviceRoom(parsed.data);
       }
       next();
-    } catch {
-      next(new Error('UNAUTHORIZED'));
+    } catch (err) {
+      // A real "no" (bad or revoked token, unknown device) is final: UNAUTHORIZED. Anything else,
+      // such as the database being briefly unreachable, tells the client to try again: RETRY.
+      next(new Error(err instanceof AppError ? 'UNAUTHORIZED' : 'RETRY'));
     }
   });
 

@@ -25,9 +25,11 @@ const orderLineSchema = z
   .strict();
 
 // The phone sends only which dishes and how many; prices and the total come from the server.
+// checkoutId: a random id for this checkout, so a repeated tap returns the same order.
 export const placeOrderSchema = z
   .object({
     customerName: customerNameSchema,
+    checkoutId: z.uuidv4().optional(),
     items: z
       .array(orderLineSchema)
       .min(1, 'Your order is empty')
@@ -39,7 +41,7 @@ export const placeOrderSchema = z
   })
   .strict();
 
-// GET /api/orders?status=new or ?status=new,ready — which orders the kitchen board loads.
+// GET /api/orders?status=new (kitchen) or ?status=ready&order=newest (unpaid list).
 export const kitchenOrdersQuerySchema = z
   .object({
     status: z
@@ -48,6 +50,8 @@ export const kitchenOrdersQuerySchema = z
       .transform((value) => value.split(',').map((part) => part.trim()))
       .pipe(z.array(z.enum(ORDER_STATUSES)).min(1).max(ORDER_STATUSES.length))
       .default(['new']),
+    // The kitchen works oldest first; the unpaid list shows the newest first.
+    order: z.enum(['oldest', 'newest']).default('oldest'),
   })
   .strict();
 
