@@ -1,11 +1,11 @@
 import { Router } from 'express';
-import { createOrder, getMyOrder } from '../controllers/order.controller.js';
+import { createOrder, getMyOrder, markMyOrderPaid } from '../controllers/order.controller.js';
 import { getPublicMenu } from '../controllers/public.controller.js';
 import { orderDeviceLimiter, orderIpLimiter } from '../middleware/rateLimit.js';
 import { requireDevice } from '../middleware/requireDevice.js';
 import { validate } from '../middleware/validate.js';
 import { idParamsSchema } from '../validators/common.js';
-import { placeOrderSchema } from '../validators/order.validators.js';
+import { payOrderSchema, placeOrderSchema } from '../validators/order.validators.js';
 import { slugParamsSchema } from '../validators/public.validators.js';
 
 const router = Router();
@@ -26,5 +26,13 @@ router.post(
 );
 
 router.get('/orders/:id', requireDevice, validate({ params: idParamsSchema }), getMyOrder);
+
+// Pay after eating: the phone that placed the order says it paid (UPI or cash).
+router.post(
+  '/orders/:id/paid',
+  requireDevice,
+  validate({ params: idParamsSchema, body: payOrderSchema }),
+  markMyOrderPaid,
+);
 
 export default router;

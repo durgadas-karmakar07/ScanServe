@@ -4,10 +4,16 @@ import { Restaurant } from '../models/Restaurant.js';
 import { changeOrderStatus, placeOrder } from '../services/order.service.js';
 import { AppError } from '../utils/AppError.js';
 
-// The café details the order status page shows. No UPI ID yet (paying arrives with step 1.7).
+// The café details the order status page shows, including the UPI ID the customer pays to
+// (the amount always comes from the order on the server).
 const restaurantForOrder = (restaurant) =>
   restaurant
-    ? { name: restaurant.name, slug: restaurant.slug, logoUrl: restaurant.toCustomer().logoUrl }
+    ? {
+        name: restaurant.name,
+        slug: restaurant.slug,
+        upiId: restaurant.upiId,
+        logoUrl: restaurant.toCustomer().logoUrl,
+      }
     : null;
 
 // POST /api/public/:slug/orders — a customer places an order from their phone.
@@ -31,12 +37,25 @@ export async function getMyOrder(req, res) {
   res.json({ order: order.toCustomer(), restaurant: restaurantForOrder(restaurant) });
 }
 
-// ---- Kitchen (owner login): orders are always looked up with the token's restaurantId ----
+// POST /api/public/orders/:id/paid — the customer says they paid (UPI or cash), after the order
+// is ready. Pay-after-eating is trust-based; the owner sees it leave the unpaid list.
+export async function markMyOrderPaid(req, res) {
+  const order = await changeOrderStatus({
+    orderId: req.valid.params.id,
+    status: 'paid',
+    scope: { deviceId: req.device.deviceId },
+    changes: { paymentMethod: req.valid.body.method, paidMarkedBy: 'customer' },
+  });
+  const restaurant = await Restaurant.findById(order.restaurantId);
+  res.json({ order: order.toCustomer(), restaurant: restaurantForOrder(restaurant) });
+}
 
-// The kitchen board can show many orders at once; more than this means something is stuck.
+// ---- Kitchen and owner (owner login): orders are always looked up with the token's café ----
+
+// The board can show many orders at once; more than this means something is stuck.
 const KITCHEN_LIMIT = 100;
 
-// GET /api/orders?status=new — the kitchen board, oldest first.
+// GET /api/orders?status=new — the kitchen board; ?status=ready — the unpaid list. Oldest first.
 export async function getKitchenOrders(req, res) {
   const orders = await Order.find({
     restaurantId: req.auth.restaurantId,
@@ -47,22 +66,31 @@ export async function getKitchenOrders(req, res) {
   res.json({ orders: orders.map((order) => order.toKitchen()) });
 }
 
+const changeForCafe = (req, status, changes) =>
+  changeOrderStatus({
+    orderId: req.valid.params.id,
+    status,
+    scope: { restaurantId: req.auth.restaurantId },
+    changes,
+  });
+
 // PATCH /api/orders/:id/ready — the one kitchen tap.
 export async function markOrderReady(req, res) {
-  const order = await changeOrderStatus({
-    restaurantId: req.auth.restaurantId,
-    orderId: req.valid.params.id,
-    status: 'ready',
-  });
+  const order = await changeForCafe(req, 'ready');
   res.json({ order: order.toKitchen() });
 }
 
 // PATCH /api/orders/:id/cancel — the café cannot make an order (asked to confirm first).
 export async function cancelOrder(req, res) {
-  const order = await changeOrderStatus({
-    restaurantId: req.auth.restaurantId,
-    orderId: req.valid.params.id,
-    status: 'cancelled',
+  const order = await changeForCafe(req, 'cancelled');
+  res.json({ order: order.toKitchen() });
+}
+
+// PATCH /api/orders/:id/mark-paid — the owner marks a ready order paid (UPI or cash).
+export async function markOrderPaid(req, res) {
+  const order = await changeForCafe(req, 'paid', {
+    paymentMethod: req.valid.body.method,
+    paidMarkedBy: 'owner',
   });
   res.json({ order: order.toKitchen() });
 }

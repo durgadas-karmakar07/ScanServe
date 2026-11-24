@@ -50,3 +50,10 @@ export const kitchenOrdersQuerySchema = z
       .default(['new']),
   })
   .strict();
+
+// Marking an order paid: how it was paid. The amount is never sent; it is the order's total.
+export const payOrderSchema = z
+  .object({
+    method: z.enum(['upi', 'cash'], { error: 'Choose UPI or cash' }),
+  })
+  .strict();

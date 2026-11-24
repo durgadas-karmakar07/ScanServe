@@ -122,23 +122,35 @@ export async function placeOrder({ slug, deviceId, customerName, lines }) {
 }
 
 // Rules.md section 5: the only status changes allowed are new -> ready -> paid and
-// new|ready -> cancelled (paid arrives with step 1.7). Each target lists the statuses it may
-// come from.
+// new|ready -> cancelled. Each target lists the statuses it may come from. Paying is allowed
+// only once the order is ready (pay after eating).
 const ALLOWED_FROM = {
   ready: ['new'],
   cancelled: ['new', 'ready'],
+  paid: ['ready'],
 };
-const TIME_FIELD = { ready: 'readyAt', cancelled: 'cancelledAt' };
-const STATUS_WORDS = { new: 'new', ready: 'ready', paid: 'paid', cancelled: 'cancelled' };
+const TIME_FIELD = { ready: 'readyAt', cancelled: 'cancelledAt', paid: 'paidAt' };
+// Why a change was refused, by the order's current status.
+const REFUSED_BECAUSE = {
+  new: 'is not ready yet',
+  ready: 'is already ready',
+  paid: 'is already paid',
+  cancelled: 'was cancelled',
+};
 
-// Tells the kitchen screens and the customer's phone what changed. The phone refetches its
-// order over REST; these events only say "look again".
+// The live event for each status, sent to the café's kitchen screens and the customer's phone.
+// Events only say "look again"; screens fetch the order itself over REST.
+const EVENTS = {
+  ready: (order) => ['order:ready', { orderId: order.id, orderNumber: order.orderNumber }],
+  cancelled: (order) => ['order:cancelled', { orderId: order.id }],
+  paid: (order) => [
+    'order:paid',
+    { orderId: order.id, paymentMethod: order.paymentMethod, paidMarkedBy: order.paidMarkedBy },
+  ],
+};
+
 function announceStatus(order) {
-  const event = order.status === 'ready' ? 'order:ready' : 'order:cancelled';
-  const payload =
-    order.status === 'ready'
-      ? { orderId: order.id, orderNumber: order.orderNumber }
-      : { orderId: order.id };
+  const [event, payload] = EVENTS[order.status](order);
   emitToKitchen(order.restaurantId, event, payload);
   emitToDevice(order.deviceId, event, payload);
 }
@@ -146,10 +158,13 @@ function announceStatus(order) {
 // Every order status change goes through here. One atomic update that only matches allowed
 // starting statuses, so a Ready and a Cancel tapped at the same moment cannot both win. Doing
 // the same thing twice (a double tap) is harmless and returns the order unchanged.
-export async function changeOrderStatus({ restaurantId, orderId, status }) {
+// scope says whose order it must be, built in code from the login or the device, never from the
+// request: { restaurantId } for the café, { deviceId } for the customer's phone.
+// changes: extra fields for this change (paymentMethod and paidMarkedBy when paying).
+export async function changeOrderStatus({ orderId, status, scope, changes = {} }) {
   const order = await Order.findOneAndUpdate(
-    { _id: orderId, restaurantId, status: trusted({ $in: ALLOWED_FROM[status] }) },
-    { $set: { status, [TIME_FIELD[status]]: new Date() } },
+    { _id: orderId, ...scope, status: trusted({ $in: ALLOWED_FROM[status] }) },
+    { $set: { status, [TIME_FIELD[status]]: new Date(), ...changes } },
     { returnDocument: 'after' },
   );
   if (order) {
@@ -157,13 +172,13 @@ export async function changeOrderStatus({ restaurantId, orderId, status }) {
     return order;
   }
 
-  // Nothing changed: the order is missing (or another café's), already done, or not allowed.
-  const current = await Order.findOne({ _id: orderId, restaurantId });
+  // Nothing changed: the order is missing (or not theirs), already done, or not allowed.
+  const current = await Order.findOne({ _id: orderId, ...scope });
   if (!current) throw new AppError(404, 'ORDER_NOT_FOUND', 'Order not found.');
   if (current.status === status) return current;
   throw new AppError(
     409,
     'INVALID_STATUS_CHANGE',
-    `Order #${current.orderNumber} is already ${STATUS_WORDS[current.status]}.`,
+    `Order #${current.orderNumber} ${REFUSED_BECAUSE[current.status]}.`,
   );
 }
