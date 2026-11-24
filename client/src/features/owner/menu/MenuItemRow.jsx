@@ -34,7 +34,7 @@ export default function MenuItemRow({ item, isUpdating, onToggleAvailable, onEdi
           )}
           {!item.isAvailable && <Badge tone="neutral">Sold out</Badge>}
         </div>
-        <span className="font-display text-h2 leading-none font-bold tabular-nums">
+        <span className="text-h2 leading-none font-bold tabular-nums">
           {formatRupees(item.price)}
         </span>
       </div>

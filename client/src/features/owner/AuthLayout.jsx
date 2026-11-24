@@ -12,7 +12,7 @@ export default function AuthLayout({ title, subtitle, children, footer }) {
       <header className="flex flex-col gap-4">
         <Wordmark size="lg" />
         <div className="flex flex-col gap-1">
-          <h1 className="text-h1 font-bold">{title}</h1>
+          <h1 className="text-h1">{title}</h1>
           <p className="text-text-muted">{subtitle}</p>
         </div>
       </header>

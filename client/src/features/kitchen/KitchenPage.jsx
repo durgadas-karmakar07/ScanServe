@@ -215,7 +215,7 @@ export default function KitchenPage() {
             <h1
               ref={headingRef}
               tabIndex={-1}
-              className="font-display text-h2 leading-tight font-bold break-words outline-none"
+              className="font-serif text-h2 leading-tight break-words outline-none"
             >
               Kitchen · {restaurant.name}
             </h1>
@@ -298,7 +298,7 @@ export default function KitchenPage() {
 
         {board.status === 'ready' && count === 0 && (
           <div className="flex flex-col items-center gap-2 py-24 text-center">
-            <p className="font-display text-display font-bold">No orders waiting</p>
+            <p className="font-serif text-display">No orders waiting</p>
             <p className="max-w-[40ch] text-xl text-stone-400">
               New orders appear here by themselves{hasSound ? ', with a sound' : ''}.
             </p>

@@ -21,7 +21,7 @@ export default function OrderCard({ order, now, isBusy, readyRef, onReady, onCan
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 flex-col">
-          <span className="font-display text-display leading-none font-bold tabular-nums">
+          <span className="font-serif text-[3rem] leading-none tabular-nums">
             #{order.orderNumber}
           </span>
           <span className="text-h2 font-semibold break-words">{order.customerName}</span>

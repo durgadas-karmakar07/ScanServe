@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 export default function NotFoundPage() {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col items-center justify-center gap-3 px-4 text-center">
-      <h1 className="text-h1 font-bold">Page not found</h1>
+      <h1 className="text-h1">Page not found</h1>
       <p className="text-text-muted">This link does not open anything in ScanServe.</p>
       <Link
         to="/"

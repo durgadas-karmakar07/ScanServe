@@ -7,6 +7,7 @@ import HealthPage from './features/health/HealthPage.jsx';
 import KitchenPage from './features/kitchen/KitchenPage.jsx';
 import LoginPage from './features/owner/LoginPage.jsx';
 import MenuEditor from './features/owner/menu/MenuEditor.jsx';
+import OverviewPage from './features/owner/OverviewPage.jsx';
 import OwnerLayout from './features/owner/OwnerLayout.jsx';
 import QrPoster from './features/owner/QrPoster.jsx';
 import RegisterPage from './features/owner/RegisterPage.jsx';
@@ -25,7 +26,8 @@ export default function App() {
       <Route element={<RequireAuth />}>
         <Route path="/kitchen" element={<KitchenPage />} />
         <Route path="/owner" element={<OwnerLayout />}>
-          <Route index element={<Navigate to="menu" replace />} />
+          <Route index element={<Navigate to="overview" replace />} />
+          <Route path="overview" element={<OverviewPage />} />
           <Route path="menu" element={<MenuEditor />} />
           <Route path="unpaid" element={<UnpaidPage />} />
           <Route path="qr" element={<QrPoster />} />

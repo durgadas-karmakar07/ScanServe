@@ -87,7 +87,7 @@ export default function SettingsPage() {
 
   return (
     <>
-      <h1 className="text-h1 font-bold">Settings</h1>
+      <h1 className="text-h1">Settings</h1>
 
       <Card>
         <Switch
@@ -105,7 +105,7 @@ export default function SettingsPage() {
 
       <Card>
         <form ref={formRef} className="flex flex-col gap-4" onSubmit={handleSubmit} noValidate>
-          <h2 className="text-h2 font-semibold">Café details</h2>
+          <h2 className="text-h2">Café details</h2>
           {formError && <Alert ref={alertRef}>{formError.message}</Alert>}
           <Input
             id="settings-name"
@@ -153,7 +153,7 @@ export default function SettingsPage() {
       <BrandingCard />
 
       <Card className="flex flex-col gap-3">
-        <h2 className="text-h2 font-semibold">Menu link</h2>
+        <h2 className="text-h2">Menu link</h2>
         <p className="font-semibold break-all">{menuLink}</p>
         <p className="text-sm text-text-muted">
           This link cannot be changed, because it is printed on your QR poster.
@@ -162,7 +162,7 @@ export default function SettingsPage() {
 
       <Card className="flex flex-col gap-3">
         <div className="flex flex-col gap-1">
-          <h2 className="text-h2 font-semibold">Account</h2>
+          <h2 className="text-h2">Account</h2>
           <p>{staff.name}</p>
           <p className="break-all text-text-muted">{staff.email}</p>
         </div>

@@ -65,14 +65,14 @@ export default function HealthPage() {
       <header className="flex flex-col gap-4">
         <Wordmark size="lg" />
         <div className="flex flex-col gap-1">
-          <h1 className="text-h1 font-bold">Setup check</h1>
+          <h1 className="text-h1">Setup check</h1>
           <p className="text-text-muted">This page checks that the app can talk to the server.</p>
         </div>
       </header>
 
       <Card className="flex flex-col gap-4">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-h2 font-semibold">API status</h2>
+          <h2 className="text-h2">API status</h2>
           <Badge tone={tone}>{label}</Badge>
         </div>
 

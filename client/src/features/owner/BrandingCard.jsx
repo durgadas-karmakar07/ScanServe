@@ -31,7 +31,7 @@ export default function BrandingCard() {
   return (
     <Card className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
-        <h2 className="text-h2 font-semibold">Look of your menu</h2>
+        <h2 className="text-h2">Look of your menu</h2>
         <p className="text-text-muted">Customers see these at the top of your menu.</p>
       </div>
       <PhotoPicker

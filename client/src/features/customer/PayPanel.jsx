@@ -55,12 +55,12 @@ export default function PayPanel({ order, restaurant, onPaid }) {
   return (
     <section
       aria-labelledby="pay-title"
-      className="flex flex-col gap-3 rounded-card border border-border bg-surface p-4"
+      className="flex flex-col gap-3 rounded-card bg-surface p-5 shadow-card"
     >
-      <h2 id="pay-title" className="text-h2 font-bold">
+      <h2 id="pay-title" className="text-h1">
         Pay after eating
       </h2>
-      <p className="font-display text-display leading-none font-bold tabular-nums">
+      <p className="text-[2.75rem] leading-none font-bold tabular-nums">
         {formatRupees(order.total)}
       </p>
 
@@ -71,7 +71,7 @@ export default function PayPanel({ order, restaurant, onPaid }) {
       <div className="flex flex-wrap items-center gap-x-2 text-text-muted">
         <span>
           No UPI app opened? Pay {formatRupees(order.total)} to{' '}
-          <strong className="break-all text-text">{restaurant.upiId}</strong>
+          <strong className="break-words text-text">{restaurant.upiId}</strong>
         </span>
         <button
           type="button"

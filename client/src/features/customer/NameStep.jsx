@@ -40,7 +40,7 @@ export default function NameStep({ initialName = '', isPlacing, onSubmit, onCanc
           if (error) setError('');
         }}
       />
-      <Button type="submit" variant="accent" aria-disabled={isPlacing || undefined}>
+      <Button type="submit" variant="primary" aria-disabled={isPlacing || undefined}>
         <ShoppingBag size={24} aria-hidden="true" />
         {isPlacing ? 'Placing order…' : 'Place order'}
       </Button>

@@ -146,7 +146,7 @@ export default function UnpaidPage() {
   return (
     <>
       <div className="flex flex-col gap-1">
-        <h1 ref={headingRef} tabIndex={-1} className="text-h1 font-bold outline-none">
+        <h1 ref={headingRef} tabIndex={-1} className="text-h1 outline-none">
           Unpaid
         </h1>
         <p className="text-text-muted">
@@ -179,7 +179,7 @@ export default function UnpaidPage() {
             <span className="font-semibold">
               {list.count === 1 ? '1 order' : `${list.count} orders`} to collect
             </span>
-            <span className="font-display text-h1 font-bold tabular-nums">
+            <span className="text-[1.75rem] leading-none font-bold tabular-nums">
               {formatRupees(list.amount)}
             </span>
           </Card>
@@ -203,7 +203,7 @@ export default function UnpaidPage() {
                     <Card className="flex flex-col gap-3">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex min-w-0 flex-col">
-                          <span className="font-display text-h1 leading-tight font-bold tabular-nums">
+                          <span className="text-h2 leading-tight font-bold tabular-nums">
                             #{order.orderNumber}{' '}
                             <span className="font-sans text-h2 font-semibold break-words">
                               {order.customerName}
@@ -211,7 +211,7 @@ export default function UnpaidPage() {
                           </span>
                           <span className="text-text-muted">{readyLabel(order, now)}</span>
                         </div>
-                        <span className="shrink-0 font-display text-h2 font-bold tabular-nums">
+                        <span className="shrink-0 text-h2 font-bold tabular-nums">
                           {formatRupees(order.total)}
                         </span>
                       </div>

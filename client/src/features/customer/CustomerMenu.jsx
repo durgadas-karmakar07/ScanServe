@@ -7,19 +7,19 @@ import Alert from '../../components/ui/Alert.jsx';
 import Button from '../../components/ui/Button.jsx';
 import Card from '../../components/ui/Card.jsx';
 import Sheet from '../../components/ui/Sheet.jsx';
-import { useActiveSection } from '../../hooks/useActiveSection.js';
 import { useCart } from '../../hooks/useCart.js';
 import { useDevice } from '../../hooks/useDevice.js';
 import { useToast } from '../../hooks/useToast.js';
 import { groupByCategory } from '../../lib/menu.js';
 import { readDeviceId } from '../../lib/deviceStorage.js';
 import CartBar from './CartBar.jsx';
-import CategoryTabs from './CategoryTabs.jsx';
+import CategoryChips from './CategoryChips.jsx';
 import DishCard from './DishCard.jsx';
+import DishDetail from './DishDetail.jsx';
 import MenuHero from './MenuHero.jsx';
 import OrderSummary from './OrderSummary.jsx';
 
-const SECTION_PREFIX = 'category';
+const MENU_ID = 'our-menu';
 const LOADING = { status: 'loading', restaurant: null, items: [], error: null };
 // The phone's device ID was not accepted: get a new one and try once more.
 const DEVICE_ERRORS = ['DEVICE_REQUIRED', 'DEVICE_UNKNOWN'];
@@ -95,7 +95,12 @@ export default function CustomerMenu({ slug }) {
   }, [slug, attempt]);
 
   const groups = useMemo(() => groupByCategory(menu.items), [menu.items]);
-  const [activeIndex, selectSection] = useActiveSection(SECTION_PREFIX, groups.length);
+  // null = All. A category that disappears after a menu reload falls back to All.
+  const [category, setCategory] = useState(null);
+  const visibleGroups = groups.filter(([name]) => category === null || name === category);
+  const shownGroups = visibleGroups.length > 0 ? visibleGroups : groups;
+  // The dish whose page is open, if any.
+  const [detailItem, setDetailItem] = useState(null);
 
   // Dishes that were deleted or sold out since they were added stay hidden from the order, so
   // drop them from the cart too; otherwise they would still count towards the 30-dish limit.
@@ -144,14 +149,6 @@ export default function CustomerMenu({ slug }) {
     setIsOrderOpen(isOpen);
   };
 
-  const jumpTo = (index) => {
-    selectSection(index);
-    const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    document
-      .getElementById(`${SECTION_PREFIX}-${index}`)
-      ?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'start' });
-  };
-
   // Sends the cart as an order. On success the cart empties and the order status page opens.
   // A failure is thrown back to OrderSummary, which shows its message.
   const placeOrder = async (name) => {
@@ -183,7 +180,7 @@ export default function CustomerMenu({ slug }) {
   if (menu.status === 'loading') {
     return (
       <div aria-busy="true">
-        <div className="h-[280px] animate-pulse bg-primary sm:h-[340px]" />
+        <div className="h-[min(64dvh,560px)] animate-pulse bg-night" />
         <p className="flex items-center justify-center gap-3 p-8 text-text-muted" role="status">
           <LoaderCircle size={24} className="animate-spin" aria-hidden="true" />
           Opening the menu…
@@ -196,7 +193,7 @@ export default function CustomerMenu({ slug }) {
     const isMissing = menu.error.status === 404 || menu.error.status === 400;
     return (
       <main className="mx-auto flex min-h-dvh max-w-[480px] flex-col justify-center gap-4 px-4">
-        <h1 className="text-h1 font-bold">
+        <h1 className="text-h1">
           {isMissing ? 'We could not find this café' : 'The menu did not load'}
         </h1>
         {isMissing ? (
@@ -235,78 +232,100 @@ export default function CustomerMenu({ slug }) {
 
   return (
     <>
-      <MenuHero restaurant={restaurant} />
-      {groups.length > 0 && (
-        <CategoryTabs
-          categories={groups.map(([category]) => category)}
-          activeIndex={activeIndex}
-          onSelect={jumpTo}
-        />
-      )}
+      <MenuHero restaurant={restaurant} menuId={MENU_ID} />
 
-      <div className="mx-auto max-w-[1200px] px-4 pt-6 pb-32 lg:grid lg:grid-cols-[1fr_340px] lg:gap-8 lg:pb-12">
-        <main ref={mainRef} tabIndex={-1} className="flex flex-col gap-8 outline-none">
-          {openOrders.length > 0 && (
-            <nav aria-label="Your orders" className="flex flex-col gap-2">
-              {openOrders.map((order) => (
-                <Link
-                  key={order.id}
-                  to={`/m/${slug}/order/${order.id}`}
-                  className="flex min-h-13 items-center gap-3 rounded-card border border-border bg-surface p-4 font-semibold hover:bg-primary-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                >
-                  <ReceiptText size={24} className="shrink-0 text-primary" aria-hidden="true" />
-                  <span className="min-w-0 flex-1">
-                    Your order <span className="tabular-nums">#{order.orderNumber}</span>:{' '}
-                    {order.status === 'ready' ? 'ready, collect and pay' : 'being cooked'}
-                  </span>
-                  <ChevronRight size={24} className="shrink-0" aria-hidden="true" />
-                </Link>
-              ))}
-            </nav>
-          )}
-          {!isOrderingOpen && (
-            <Alert>This café is not taking orders right now. You can still look at the menu.</Alert>
-          )}
-          {groups.length === 0 && (
-            <p className="text-text-muted">The menu is being prepared. Please check back soon.</p>
-          )}
-          {groups.map(([category, items], index) => (
-            <section
-              key={category}
-              id={`${SECTION_PREFIX}-${index}`}
-              aria-labelledby={`${SECTION_PREFIX}-${index}-title`}
-              className="flex scroll-mt-16 flex-col gap-3"
-            >
-              <h2 id={`${SECTION_PREFIX}-${index}-title`} className="text-h2 font-bold break-words">
-                {category}
-              </h2>
-              <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {items.map((item) => (
-                  <DishCard
-                    key={item.id}
-                    item={item}
-                    quantity={lines[item.id] ?? 0}
-                    maxQuantity={maxQuantity}
-                    isOrderingOpen={isOrderingOpen}
-                    onChangeQuantity={(quantity) => changeQuantity(item.id, quantity)}
-                  />
+      {/* The cream menu panel slides up over the photo, like the reference layout. */}
+      <div className="relative z-10 -mt-8 rounded-t-[2rem] bg-bg">
+        <div className="mx-auto max-w-[1200px] px-5 pt-7 pb-32 sm:px-8 lg:grid lg:grid-cols-[1fr_360px] lg:gap-10 lg:pb-12">
+          <main
+            id={MENU_ID}
+            ref={mainRef}
+            tabIndex={-1}
+            className="flex min-w-0 scroll-mt-0 flex-col gap-5 outline-none"
+          >
+            {openOrders.length > 0 && (
+              <nav aria-label="Your orders" className="flex flex-col gap-2">
+                {openOrders.map((order) => (
+                  <Link
+                    key={order.id}
+                    to={`/m/${slug}/order/${order.id}`}
+                    className="flex min-h-13 items-center gap-3 rounded-card bg-surface p-4 font-semibold shadow-card hover:bg-surface-warm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                  >
+                    <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary">
+                      <ReceiptText size={22} aria-hidden="true" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      Your order <span className="tabular-nums">#{order.orderNumber}</span>
+                      <span className="block text-base font-normal text-text-muted">
+                        {order.status === 'ready' ? 'Ready: collect it, then pay' : 'Being cooked'}
+                      </span>
+                    </span>
+                    <ChevronRight
+                      size={24}
+                      className="shrink-0 text-text-muted"
+                      aria-hidden="true"
+                    />
+                  </Link>
                 ))}
-              </ul>
-            </section>
-          ))}
-        </main>
+              </nav>
+            )}
+            {!isOrderingOpen && (
+              <Alert>
+                This café is not taking orders right now. You can still look at the menu.
+              </Alert>
+            )}
 
-        <aside className="hidden lg:block" aria-label="Your order">
-          <Card className="sticky top-20 flex flex-col gap-3">
-            <h2 className="text-h2 font-bold">Your order</h2>
-            {orderSummary}
-          </Card>
-        </aside>
+            <div className="flex flex-col gap-1">
+              <h2 className="text-h1">Our menu</h2>
+              <p className="text-text-muted">
+                {menu.items.length === 1 ? '1 dish' : `${menu.items.length} dishes`} · Order now,
+                pay after eating
+              </p>
+            </div>
+
+            {groups.length > 0 && (
+              <CategoryChips
+                categories={groups.map(([name]) => name)}
+                selected={visibleGroups.length > 0 ? category : null}
+                onSelect={setCategory}
+              />
+            )}
+
+            {groups.length === 0 && (
+              <p className="text-text-muted">The menu is being prepared. Please check back soon.</p>
+            )}
+            {shownGroups.map(([name, items]) => (
+              <section key={name} aria-label={name} className="flex flex-col gap-3">
+                <h3 className="font-serif text-h2 break-words">{name}</h3>
+                <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
+                  {items.map((item) => (
+                    <DishCard
+                      key={item.id}
+                      item={item}
+                      quantity={lines[item.id] ?? 0}
+                      maxQuantity={maxQuantity}
+                      isOrderingOpen={isOrderingOpen}
+                      onChangeQuantity={(quantity) => changeQuantity(item.id, quantity)}
+                      onOpen={setDetailItem}
+                    />
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </main>
+
+          <aside className="hidden lg:block" aria-label="Your order">
+            <Card className="sticky top-6 flex flex-col gap-3 shadow-card">
+              <h2 className="text-h1">Your order</h2>
+              {orderSummary}
+            </Card>
+          </aside>
+        </div>
+
+        <footer className="pb-28 text-center text-sm text-text-muted lg:pb-8">
+          Menu by ScanServe
+        </footer>
       </div>
-
-      <footer className="pb-28 text-center text-sm text-text-muted lg:pb-8">
-        Menu by ScanServe
-      </footer>
 
       <CartAnnouncer message={announcement} />
       {cart.count > 0 && (
@@ -320,6 +339,16 @@ export default function CustomerMenu({ slug }) {
             Back to menu
           </Button>
         </Sheet>
+      )}
+      {detailItem && (
+        <DishDetail
+          item={detailItem}
+          quantity={lines[detailItem.id] ?? 0}
+          maxQuantity={maxQuantity}
+          isOrderingOpen={isOrderingOpen}
+          onSetQuantity={(quantity) => changeQuantity(detailItem.id, quantity)}
+          onClose={() => setDetailItem(null)}
+        />
       )}
     </>
   );

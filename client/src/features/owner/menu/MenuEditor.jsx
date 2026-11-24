@@ -91,7 +91,7 @@ export default function MenuEditor() {
     <>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="flex flex-col gap-1">
-          <h1 className="text-h1 font-bold">Menu</h1>
+          <h1 className="text-h1">Menu</h1>
           {menu.status === 'ready' && (
             <p className="text-text-muted">
               {menu.items.length} {menu.items.length === 1 ? 'dish' : 'dishes'}
@@ -127,7 +127,7 @@ export default function MenuEditor() {
 
       {menu.status === 'ready' && menu.items.length === 0 && (
         <Card className="flex flex-col items-start gap-3">
-          <h2 className="text-h2 font-semibold">No dishes yet</h2>
+          <h2 className="text-h2">No dishes yet</h2>
           <p className="text-text-muted">
             Add your dishes with their price and veg tag. Customers will order from this menu.
           </p>
@@ -137,7 +137,7 @@ export default function MenuEditor() {
 
       {groups.map(([category, items]) => (
         <Card key={category} className="flex flex-col">
-          <h2 className="text-h2 font-semibold break-words">{category}</h2>
+          <h2 className="text-h2 break-words">{category}</h2>
           <ul className="divide-y divide-border">
             {items.map((item) => (
               <MenuItemRow

@@ -117,7 +117,7 @@ export default function OrderSummary({
           </ul>
           <div className="flex items-baseline justify-between border-t border-border pt-3">
             <span className="font-semibold">Total</span>
-            <span className="font-display text-h1 font-bold tabular-nums">
+            <span className="text-[1.75rem] leading-none font-bold tabular-nums">
               {formatRupees(cart.total)}
             </span>
           </div>
@@ -151,7 +151,7 @@ export default function OrderSummary({
               )}
               <Button
                 ref={placeButtonRef}
-                variant="accent"
+                variant="primary"
                 aria-disabled={isPlacing || undefined}
                 onClick={handlePlaceClick}
               >

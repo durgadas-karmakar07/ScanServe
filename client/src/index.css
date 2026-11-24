@@ -1,36 +1,50 @@
 @import 'tailwindcss';
 
-/* Design tokens ("chalkboard and marigold"): keep in sync with docs/Design.md */
+/* Design tokens ("cream, olive and night"): keep in sync with docs/Design.md */
 @theme {
-  --color-primary: #1d3b33;
-  --color-primary-hover: #142a24;
-  --color-primary-soft: #e1ece6;
-  --color-accent: #f2a20c;
-  --color-accent-hover: #d98c00;
-  --color-accent-soft: #fdf1d6;
-  --color-bg: #eef2ef;
+  /* Olive: the main action (Add to Order, View order, active chip) */
+  --color-primary: #3e4a24;
+  --color-primary-hover: #2f3919;
+  --color-primary-soft: #e9ecdd;
+  /* Burnt orange: the invitation (Explore Menu), counts and highlights; white text passes AA */
+  --color-accent: #c2541f;
+  --color-accent-hover: #a8461a;
+  --color-accent-soft: #fbe9df;
+  /* Cream page, white cards, warm ink */
+  --color-bg: #f5f0e8;
   --color-surface: #ffffff;
-  --color-border: #d6ddd8;
-  --color-text: #1e2622;
-  --color-text-muted: #56615b;
-  --color-success: #1e7f46;
+  --color-surface-warm: #fbf8f3;
+  --color-border: #e6ded2;
+  --color-text: #1e1915;
+  --color-text-muted: #6e655c;
+  /* Night: photo overlays, dark dish cards, the owner sidebar and the kitchen */
+  --color-night: #1c1714;
+  --color-night-soft: #2a221d;
+  --color-night-line: #3b3029;
+  --color-success: #2e7d4f;
   --color-warning: #b45309;
-  --color-danger: #c0392b;
+  --color-danger: #b3261e;
   --color-info: #1d4ed8;
-  --color-veg: #1e7f46;
-  --color-kitchen-bg: #0c0a09;
-  --color-kitchen-card: #1c1917;
+  --color-veg: #2e7d4f;
+  --color-kitchen-bg: #1c1714;
+  --color-kitchen-card: #2a221d;
 
-  --font-display: 'Baloo 2 Variable', 'Baloo 2', 'Noto Sans Devanagari', system-ui, sans-serif;
+  --font-serif: 'DM Serif Display', Georgia, 'Noto Serif', serif;
   --font-sans: 'Hind', 'Noto Sans Bengali', 'Noto Sans Devanagari', system-ui, sans-serif;
-  --radius-card: 1rem;
+  --radius-card: 1.25rem;
 
-  --text-display: 3rem;
-  --text-display--line-height: 1.05;
-  --text-h1: 1.75rem;
-  --text-h1--line-height: 1.2;
+  --text-display: 2.75rem;
+  --text-display--line-height: 1.02;
+  --text-h1: 1.875rem;
+  --text-h1--line-height: 1.15;
   --text-h2: 1.375rem;
   --text-h2--line-height: 1.25;
+  /* Small spaced capitals under titles, like a menu card (used sparingly) */
+  --text-eyebrow: 0.75rem;
+  --text-eyebrow--line-height: 1.4;
+  --text-eyebrow--letter-spacing: 0.18em;
+
+  --shadow-card: 0 1px 2px rgb(30 25 21 / 0.04), 0 8px 24px rgb(30 25 21 / 0.06);
 }
 
 @layer base {
@@ -41,11 +55,18 @@
     line-height: 1.5;
   }
 
-  /* Baloo 2 for every heading: the café-board voice of the app */
+  /* Titles use the serif display face: the voice of a printed café menu. */
+  h1,
+  h2 {
+    font-family: var(--font-serif);
+    font-weight: 400;
+  }
+
+  /* The serif face has one weight; never let the browser fake a bold version of it. */
   h1,
   h2,
-  h3 {
-    font-family: var(--font-display);
+  .font-serif {
+    font-synthesis: none;
   }
 }
 

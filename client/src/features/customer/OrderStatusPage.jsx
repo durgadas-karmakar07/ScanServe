@@ -150,7 +150,7 @@ export default function OrderStatusPage() {
   if (isNotFound) {
     return (
       <main className="mx-auto flex min-h-dvh max-w-[480px] flex-col justify-center gap-4 px-4">
-        <h1 className="text-h1 font-bold">We could not find this order</h1>
+        <h1 className="text-h1">We could not find this order</h1>
         <p className="text-text-muted">
           An order can only be seen on the phone that placed it. Ask at the counter if you need
           help.
@@ -175,7 +175,7 @@ export default function OrderStatusPage() {
   if (state.status === 'error') {
     return (
       <main className="mx-auto flex min-h-dvh max-w-[480px] flex-col justify-center gap-4 px-4">
-        <h1 className="text-h1 font-bold">Your order did not load</h1>
+        <h1 className="text-h1">Your order did not load</h1>
         <Alert>{state.error.message}</Alert>
         <Button onClick={checkAgain}>
           <RotateCw size={24} aria-hidden="true" />
@@ -204,12 +204,16 @@ export default function OrderStatusPage() {
         Back to the menu
       </Link>
 
-      <header className="flex flex-col items-center gap-1 rounded-card bg-primary px-4 py-6 text-center text-white">
-        {restaurant && <p className="text-lg break-words text-white/85">{restaurant.name}</p>}
-        <h1 className="font-display text-display leading-tight font-bold tabular-nums">
-          Order #{order.orderNumber}
+      <header className="flex flex-col items-center gap-1 rounded-card bg-night px-4 py-7 text-center text-white shadow-card">
+        {restaurant && (
+          <p className="text-eyebrow font-semibold break-words text-white/70 uppercase">
+            {restaurant.name}
+          </p>
+        )}
+        <h1 className="text-[3.25rem] leading-tight tabular-nums">
+          <span className="sr-only">Order </span>#{order.orderNumber}
         </h1>
-        <p className="text-lg break-words">For {order.customerName}</p>
+        <p className="text-lg break-words text-white/85">Order for {order.customerName}</p>
       </header>
 
       {/* Read out when a check finds a new status. */}
@@ -222,7 +226,7 @@ export default function OrderStatusPage() {
         <status.Icon size={32} className="mt-1 shrink-0" aria-hidden="true" />
         <div className="flex min-w-0 flex-col items-start gap-1">
           <Badge tone={status.tone}>{status.badge}</Badge>
-          <p className="font-display text-h2 font-bold">{title}</p>
+          <p className="font-serif text-h2">{title}</p>
           <p className="text-text-muted">{status.text}</p>
         </div>
       </div>
@@ -239,7 +243,7 @@ export default function OrderStatusPage() {
       )}
 
       <Card className="flex flex-col gap-3">
-        <h2 className="text-h2 font-bold">Your order</h2>
+        <h2 className="text-h2">Your order</h2>
         <ul className="flex flex-col divide-y divide-border">
           {order.items.map((item, index) => (
             <li
@@ -255,7 +259,7 @@ export default function OrderStatusPage() {
         </ul>
         <div className="flex items-baseline justify-between border-t border-border pt-3">
           <span className="font-semibold">Total</span>
-          <span className="font-display text-h1 font-bold tabular-nums">
+          <span className="text-[1.75rem] leading-none font-bold tabular-nums">
             {formatRupees(order.total)}
           </span>
         </div>

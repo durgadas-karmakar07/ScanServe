@@ -1,4 +1,4 @@
-import '@fontsource-variable/baloo-2';
+import '@fontsource/dm-serif-display/400.css';
 import '@fontsource/hind/400.css';
 import '@fontsource/hind/500.css';
 import '@fontsource/hind/600.css';

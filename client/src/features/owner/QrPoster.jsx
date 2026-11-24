@@ -37,7 +37,7 @@ export default function QrPoster() {
   return (
     <>
       <div className="flex flex-col gap-1 print:hidden">
-        <h1 className="text-h1 font-bold">QR poster</h1>
+        <h1 className="text-h1">QR poster</h1>
         <p className="text-text-muted">
           Print it and put it on your menu board or tables. The QR keeps working even if you change
           the menu or the café name.
@@ -45,7 +45,7 @@ export default function QrPoster() {
       </div>
 
       <article className="mx-auto flex w-full max-w-[480px] flex-col items-center gap-5 overflow-hidden rounded-card border border-border bg-surface pb-6 text-center [print-color-adjust:exact] print:max-w-none print:border-0">
-        <div className="flex w-full flex-col items-center gap-3 bg-primary px-6 py-6 text-white">
+        <div className="flex w-full flex-col items-center gap-3 bg-night px-6 py-7 text-white">
           {restaurant.logoUrl && (
             <img
               src={restaurant.logoUrl}
@@ -53,14 +53,12 @@ export default function QrPoster() {
               className="size-20 rounded-full border-4 border-white bg-white object-cover"
             />
           )}
-          <h2 className="w-full text-h1 font-bold break-words print:text-display">
-            {restaurant.name}
-          </h2>
+          <h2 className="w-full text-h1 break-words print:text-display">{restaurant.name}</h2>
           {restaurant.tagline && (
             <p className="w-full break-words text-white/85">{restaurant.tagline}</p>
           )}
         </div>
-        <p className="px-6 font-display text-h2 font-semibold">Scan to see the menu and order</p>
+        <p className="px-6 font-serif text-h2">Scan to see the menu and order</p>
         {qr.status === 'loading' && (
           <div className="flex aspect-square w-full max-w-[320px] items-center justify-center">
             <LoaderCircle size={24} className="animate-spin text-primary" aria-hidden="true" />
@@ -83,7 +81,7 @@ export default function QrPoster() {
         <ol className="flex flex-col gap-1 px-6 text-left">
           {STEPS.map((step, index) => (
             <li key={step} className="flex gap-2">
-              <span className="font-display font-bold text-primary tabular-nums">{index + 1}.</span>
+              <span className="font-bold text-accent tabular-nums">{index + 1}.</span>
               {step}
             </li>
           ))}

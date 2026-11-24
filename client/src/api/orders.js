@@ -49,3 +49,11 @@ export const markOrderPaid = (token, orderId, method) =>
 // This phone's open orders (waiting or ready, not paid) at a café, newest first.
 export const getMyOpenOrders = (slug, deviceId, options) =>
   request(`/api/public/${encodeURIComponent(slug)}/orders/mine`, { deviceId, ...options });
+
+// Owner dashboard numbers: today's orders and money collected, and what is still open.
+export const getOrderSummary = (token, options) =>
+  request('/api/orders/summary', { token, ...options });
+
+// Owner dashboard queue: orders waiting in the kitchen and ready but unpaid, oldest first.
+export const getOrderQueue = (token, options) =>
+  request('/api/orders?status=new,ready', { token, ...options });
