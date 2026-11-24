@@ -7,7 +7,7 @@ import {
   LoaderCircle,
   RotateCw,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { getMyOrder, markMyOrderPaid } from '../../api/orders.js';
 import Alert from '../../components/ui/Alert.jsx';
@@ -68,6 +68,16 @@ export default function OrderStatusPage() {
   const [state, setState] = useState(LOADING);
   const [checkCount, setCheckCount] = useState(0);
   const [isChecking, setIsChecking] = useState(false);
+  const statusRef = useRef(null);
+  // After the customer's own action (paying, Check status) the button they used can disappear,
+  // so focus moves to the status box, which also reads out the new status.
+  const focusStatusNext = useRef(false);
+
+  useEffect(() => {
+    if (state.status !== 'ready' || !focusStatusNext.current) return;
+    focusStatusNext.current = false;
+    statusRef.current?.focus();
+  }, [state]);
 
   useEffect(() => {
     if (!deviceId) return undefined;
@@ -123,11 +133,13 @@ export default function OrderStatusPage() {
   // The customer says they paid; the answer is the updated order.
   const handlePaid = async (method) => {
     const { order, restaurant } = await markMyOrderPaid(orderId, deviceId, method);
+    focusStatusNext.current = true;
     setState({ status: 'ready', order, restaurant, error: null });
   };
 
   const checkAgain = () => {
     if (isChecking) return;
+    focusStatusNext.current = true;
     setIsChecking(true);
     setCheckCount((count) => count + 1);
   };
@@ -201,7 +213,12 @@ export default function OrderStatusPage() {
       </header>
 
       {/* Read out when a check finds a new status. */}
-      <div role="status" className={`flex items-start gap-3 rounded-card border p-4 ${status.box}`}>
+      <div
+        ref={statusRef}
+        role="status"
+        tabIndex={-1}
+        className={`flex items-start gap-3 rounded-card border p-4 outline-none focus-visible:outline-2 focus-visible:outline-primary ${status.box}`}
+      >
         <status.Icon size={32} className="mt-1 shrink-0" aria-hidden="true" />
         <div className="flex min-w-0 flex-col items-start gap-1">
           <Badge tone={status.tone}>{status.badge}</Badge>

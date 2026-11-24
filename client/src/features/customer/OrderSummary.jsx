@@ -24,6 +24,15 @@ export default function OrderSummary({
   const [isAskingName, setIsAskingName] = useState(false);
   const [isPlacing, setIsPlacing] = useState(false);
   const [placeError, setPlaceError] = useState('');
+  const placeButtonRef = useRef(null);
+  // Back on the name step removes that form, so focus returns to Place order.
+  const focusPlaceNext = useRef(false);
+
+  useEffect(() => {
+    if (isAskingName || !focusPlaceNext.current) return;
+    focusPlaceNext.current = false;
+    placeButtonRef.current?.focus();
+  }, [isAskingName]);
   // When − removes a line, its buttons vanish. Focus moves to the line that took its place,
   // or the one above, or the empty message, so keyboard and screen reader users are not lost.
   const removedIndex = useRef(null);
@@ -119,7 +128,10 @@ export default function OrderSummary({
               initialName={customerName ?? ''}
               isPlacing={isPlacing}
               onSubmit={handleName}
-              onCancel={() => setIsAskingName(false)}
+              onCancel={() => {
+                focusPlaceNext.current = true;
+                setIsAskingName(false);
+              }}
             />
           ) : (
             <>
@@ -138,6 +150,7 @@ export default function OrderSummary({
                 </p>
               )}
               <Button
+                ref={placeButtonRef}
                 variant="accent"
                 aria-disabled={isPlacing || undefined}
                 onClick={handlePlaceClick}

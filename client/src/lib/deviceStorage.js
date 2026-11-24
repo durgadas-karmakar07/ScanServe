@@ -1,22 +1,27 @@
 // This phone's device ID and the customer's first name, kept in localStorage so they are
 // remembered on the next visit. Storage can throw (private mode, blocked site data), so every
-// call is guarded; without storage the phone simply gets a new ID next time.
+// call is guarded, and a copy is kept in memory: without storage the ID still works for this
+// visit (placing an order, then opening its status page), and the phone gets a new ID next time.
 const DEVICE_KEY = 'scanserve.deviceId';
 const NAME_KEY = 'scanserve.customerName';
+const memory = new Map();
 
 function read(key) {
   try {
-    return localStorage.getItem(key) || null;
+    const value = localStorage.getItem(key);
+    if (value) return value;
   } catch {
-    return null;
+    // Storage is blocked: use the copy in memory.
   }
+  return memory.get(key) ?? null;
 }
 
 function write(key, value) {
+  memory.set(key, value);
   try {
     localStorage.setItem(key, value);
   } catch {
-    // Not saved: it works for this visit only.
+    // Not saved: the copy in memory lasts for this visit.
   }
 }
 

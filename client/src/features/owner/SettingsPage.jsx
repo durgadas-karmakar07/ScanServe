@@ -1,10 +1,12 @@
-import { LoaderCircle, Save } from 'lucide-react';
+import { LoaderCircle, LogOut, Save } from 'lucide-react';
 import { useState } from 'react';
+import { logoutEverywhere } from '../../api/auth.js';
 import { updateRestaurant } from '../../api/restaurant.js';
 import Alert from '../../components/ui/Alert.jsx';
 import Button from '../../components/ui/Button.jsx';
 import Card from '../../components/ui/Card.jsx';
 import Input from '../../components/ui/Input.jsx';
+import Sheet from '../../components/ui/Sheet.jsx';
 import Switch from '../../components/ui/Switch.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useFocusFirstError } from '../../hooks/useFocusFirstError.js';
@@ -18,7 +20,24 @@ const toForm = (restaurant) => ({
 });
 
 export default function SettingsPage() {
-  const { staff, restaurant, withAuth, setRestaurant } = useAuth();
+  const { staff, restaurant, withAuth, setRestaurant, logout } = useAuth();
+  const [isConfirmingLogoutAll, setIsConfirmingLogoutAll] = useState(false);
+  const [isLoggingOutAll, setIsLoggingOutAll] = useState(false);
+  const [logoutAllError, setLogoutAllError] = useState('');
+
+  // For a lost phone or a login left on someone else's device: every login of this owner stops
+  // working, including this one, and kitchen screens disconnect.
+  const confirmLogoutAll = async () => {
+    setIsLoggingOutAll(true);
+    setLogoutAllError('');
+    try {
+      await withAuth(logoutEverywhere);
+      logout();
+    } catch (err) {
+      setLogoutAllError(err.message);
+      setIsLoggingOutAll(false);
+    }
+  };
   const { showToast } = useToast();
   const [form, setForm] = useState(() => toForm(restaurant));
   const [fieldErrors, setFieldErrors] = useState({});
@@ -141,11 +160,51 @@ export default function SettingsPage() {
         </p>
       </Card>
 
-      <Card className="flex flex-col gap-1">
-        <h2 className="text-h2 font-semibold">Account</h2>
-        <p>{staff.name}</p>
-        <p className="break-all text-text-muted">{staff.email}</p>
+      <Card className="flex flex-col gap-3">
+        <div className="flex flex-col gap-1">
+          <h2 className="text-h2 font-semibold">Account</h2>
+          <p>{staff.name}</p>
+          <p className="break-all text-text-muted">{staff.email}</p>
+        </div>
+        <p className="text-sm text-text-muted">
+          Lost a phone, or logged in on someone else's device? Log out everywhere ends every login,
+          including this one and the kitchen screen.
+        </p>
+        <Button
+          variant="secondary"
+          isFullWidth={false}
+          onClick={() => {
+            setLogoutAllError('');
+            setIsConfirmingLogoutAll(true);
+          }}
+        >
+          <LogOut size={24} aria-hidden="true" />
+          Log out everywhere
+        </Button>
       </Card>
+
+      {isConfirmingLogoutAll && (
+        <Sheet
+          title="Log out on every device?"
+          isBusy={isLoggingOutAll}
+          onClose={() => !isLoggingOutAll && setIsConfirmingLogoutAll(false)}
+        >
+          <p className="text-text-muted">
+            You will need to log in again here, on the kitchen screen and on every other device.
+          </p>
+          {logoutAllError && <Alert>{logoutAllError}</Alert>}
+          <Button variant="secondary" onClick={() => setIsConfirmingLogoutAll(false)}>
+            Stay logged in
+          </Button>
+          <Button
+            variant="danger"
+            aria-disabled={isLoggingOutAll || undefined}
+            onClick={() => !isLoggingOutAll && confirmLogoutAll()}
+          >
+            {isLoggingOutAll ? 'Logging out…' : 'Log out everywhere'}
+          </Button>
+        </Sheet>
+      )}
     </>
   );
 }

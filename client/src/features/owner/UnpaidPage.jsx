@@ -29,13 +29,22 @@ function readyLabel(order, now) {
 export default function UnpaidPage() {
   const { token, withAuth } = useAuth();
   const { showToast } = useToast();
-  const [list, setList] = useState({ status: 'loading', orders: [], error: null });
+  const [list, setList] = useState({
+    status: 'loading',
+    orders: [],
+    count: 0,
+    amount: 0,
+    hasMore: false,
+    error: null,
+  });
   const [loadCount, setLoadCount] = useState(0);
   const [busyIds, setBusyIds] = useState(() => new Set());
   const [now, setNow] = useState(() => Date.now());
   const headingRef = useRef(null);
   const firstButtonRefs = useRef(new Map());
   const focusIndexAfterRemoval = useRef(null);
+  // Orders paid or cancelled while a reload is on its way: its answer may still list them.
+  const removedDuringLoad = useRef(new Set());
 
   useEffect(() => {
     document.title = 'Unpaid orders · ScanServe';
@@ -45,29 +54,54 @@ export default function UnpaidPage() {
 
   useEffect(() => {
     const controller = new AbortController();
+    removedDuringLoad.current = new Set();
     withAuth(getUnpaidOrders, { signal: controller.signal })
-      .then(({ orders }) => setList({ status: 'ready', orders, error: null }))
+      .then(({ orders, count, amount, hasMore }) => {
+        const removed = removedDuringLoad.current;
+        const shown = orders.filter((order) => !removed.has(order.id));
+        const removedAmount = orders
+          .filter((order) => removed.has(order.id))
+          .reduce((sum, order) => sum + order.total, 0);
+        setList({
+          status: 'ready',
+          orders: shown,
+          count: count - (orders.length - shown.length),
+          amount: amount - removedAmount,
+          hasMore,
+          error: null,
+        });
+      })
       .catch((err) => {
         if (controller.signal.aborted || err.name === 'AbortError') return;
         setList((current) =>
           current.status === 'ready'
             ? { ...current, error: err }
-            : { status: 'error', orders: [], error: err },
+            : { ...current, status: 'error', error: err },
         );
       });
     return () => controller.abort();
   }, [withAuth, loadCount]);
 
   const reload = useCallback(() => setLoadCount((count) => count + 1), []);
+  // Takes an order off the list and out of the count and total to collect.
   const removeOrder = useCallback((orderId) => {
-    setList((current) => ({
-      ...current,
-      orders: current.orders.filter((order) => order.id !== orderId),
-    }));
+    removedDuringLoad.current.add(orderId);
+    setList((current) => {
+      const order = current.orders.find((item) => item.id === orderId);
+      if (!order) return current;
+      return {
+        ...current,
+        orders: current.orders.filter((item) => item.id !== orderId),
+        count: current.count - 1,
+        amount: current.amount - order.total,
+      };
+    });
   }, []);
 
   useSocket(token ? { token } : null, {
     onConnect: reload,
+    // The login is no longer valid: loading the list answers 401, which logs out.
+    onRefused: reload,
     // The event has only the id and number, so load the list again to get the whole order.
     'order:ready': reload,
     'order:paid': ({ orderId }) => removeOrder(orderId),
@@ -109,8 +143,6 @@ export default function UnpaidPage() {
     }
   };
 
-  const total = list.orders.reduce((sum, order) => sum + order.total, 0);
-
   return (
     <>
       <div className="flex flex-col gap-1">
@@ -145,19 +177,25 @@ export default function UnpaidPage() {
           {list.error && <Alert>Could not refresh the list. {list.error.message}</Alert>}
           <Card className="flex items-baseline justify-between gap-3">
             <span className="font-semibold">
-              {list.orders.length === 1 ? '1 order' : `${list.orders.length} orders`} to collect
+              {list.count === 1 ? '1 order' : `${list.count} orders`} to collect
             </span>
             <span className="font-display text-h1 font-bold tabular-nums">
-              {formatRupees(total)}
+              {formatRupees(list.amount)}
             </span>
           </Card>
 
+          {list.hasMore && (
+            <Alert>
+              Showing the newest {list.orders.length} of {list.count} unpaid orders. Mark some paid
+              to see older ones.
+            </Alert>
+          )}
           {list.orders.length === 0 ? (
             <p className="text-text-muted">
               Nothing unpaid. An order shows here after you tap Ready, until it is paid.
             </p>
           ) : (
-            <ul className="flex flex-col gap-3" aria-label="Unpaid orders, oldest first">
+            <ul className="flex flex-col gap-3" aria-label="Unpaid orders, newest first">
               {list.orders.map((order) => {
                 const isBusy = busyIds.has(order.id);
                 return (
@@ -188,20 +226,18 @@ export default function UnpaidPage() {
                           }}
                           variant="secondary"
                           aria-disabled={isBusy || undefined}
-                          aria-label={`Order ${order.orderNumber} paid by UPI`}
                           onClick={() => markPaid(order, 'upi')}
                         >
                           <Smartphone size={24} aria-hidden="true" />
-                          Paid UPI
+                          Paid UPI<span className="sr-only"> for order {order.orderNumber}</span>
                         </Button>
                         <Button
                           variant="secondary"
                           aria-disabled={isBusy || undefined}
-                          aria-label={`Order ${order.orderNumber} paid in cash`}
                           onClick={() => markPaid(order, 'cash')}
                         >
                           <Banknote size={24} aria-hidden="true" />
-                          Paid cash
+                          Paid cash<span className="sr-only"> for order {order.orderNumber}</span>
                         </Button>
                       </div>
                     </Card>
