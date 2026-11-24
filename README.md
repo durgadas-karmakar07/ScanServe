@@ -34,7 +34,7 @@ It is built for real tiny cafés, starting with one in Durgapur, West Bengal.
 | Owner account and café setup (name, URL, UPI ID) | 1 | Done |
 | Menu management with categories, veg tag and sold-out switch | 1 | Done |
 | Printable QR poster for the menu board | 1 | Done |
-| Customer menu from the QR: café cover and logo, category tabs, dish cards, cart | 1 | Done |
+| Customer menu from the QR: café cover and logo, category chips, dish cards, a page per dish, cart | 1 | Done |
 | Dish photos, café cover photo and logo (Cloudinary) | 1 | Done |
 | Customer ordering with no login: name asked once, remembered on the phone | 1 | Done |
 | Daily order numbers (1, 2, 3...) | 1 | Done |
@@ -42,6 +42,7 @@ It is built for real tiny cafés, starting with one in Durgapur, West Bengal.
 | Live order status on the customer's phone | 1 | Done |
 | Pay after eating: UPI app opens with the amount filled in, or pay cash | 1 | Done |
 | Owner's unpaid list, updated live | 1 | Done |
+| Owner dashboard: today's orders and money (cash / UPI), live order queue, kitchen and unpaid counts | 1 | Done |
 | Voice kitchen: orders read aloud, customer names called | 2 | Planned |
 | Daily hisab (accounts): cash vs UPI, top dishes, charts | 3 | Planned |
 | Hindi, Bengali and English, installable PWA, push notifications | 4 | Planned |
@@ -49,15 +50,19 @@ It is built for real tiny cafés, starting with one in Durgapur, West Bengal.
 
 ## Screenshots
 
-Screens from a test café: phones for customers and the owner, a tablet for the kitchen.
+Screens from a test café (no dish photos uploaded, so dishes show their first letter): phones for customers, a laptop for the owner, a tablet for the kitchen.
 
-| Customer menu | Ready, then pay after eating | Owner: unpaid list |
-|---|---|---|
-| <img src="docs/screenshots/customer-menu.jpg" alt="Customer menu on a phone: café name, category tabs, dish cards with Add buttons and the cart bar showing 2 items for ₹140" width="260"> | <img src="docs/screenshots/order-ready-pay.jpg" alt="Order status: Ready, please collect, and the pay panel with Pay with UPI, I have paid by UPI and Paying cash" width="260"> | <img src="docs/screenshots/owner-unpaid.jpg" alt="Owner unpaid list: 3 orders to collect, ₹560, each with Paid UPI and Paid cash buttons" width="260"> |
+| Scan the QR | Pick dishes | One dish | Ready, then pay |
+|---|---|---|---|
+| <img src="docs/screenshots/customer-hero.jpg" alt="Customer menu on a phone: dark hero with the café's initial, Taking orders, Welcome to The Tiffin Room, its tagline and an orange Explore menu button, then the cream Our menu panel" width="200"> | <img src="docs/screenshots/customer-menu.jpg" alt="Our menu with category chips and dark dish cards; Masala Dosa shows quantity 2, Poha is sold out, and the cart bar shows 3 items for ₹190 with View order" width="200"> | <img src="docs/screenshots/dish-page.jpg" alt="Dish page for Veg Thali: large tile, name, category, price and description, with a quantity of 2 and Add to order for ₹240" width="200"> | <img src="docs/screenshots/order-ready-pay.jpg" alt="Order #3 for Rahul is ready; the pay panel shows ₹180, Pay with UPI, the café's UPI ID with Copy UPI ID, and I've paid by UPI" width="200"> |
+
+**Owner dashboard:** today's orders and money, what is still unpaid, the live order queue and the menu with a sold-out switch, with live counts on Kitchen and Unpaid.
+
+<img src="docs/screenshots/owner-overview.jpg" alt="Owner dashboard on a laptop: dark sidebar with Kitchen 3 and Unpaid 1 badges; cards for 6 orders today, ₹300 collected (cash ₹170, UPI ₹130), ₹180 unpaid and 3 in the kitchen; an order queue of Ready and Cooking orders; menu cards" width="830">
 
 **Kitchen screen:** new orders appear live with a sound; one big **Ready** button per order.
 
-<img src="docs/screenshots/kitchen.jpg" alt="Dark kitchen board with three order cards, each with a big order number, the customer name, the items and a green Ready button" width="535">
+<img src="docs/screenshots/kitchen.jpg" alt="Dark kitchen board with three order cards, each with a big order number, the customer name, the items and a green Ready button" width="600">
 
 ## How it works
 
@@ -85,7 +90,7 @@ flowchart LR
 | Database | MongoDB Atlas, Mongoose |
 | Validation and security | zod, bcryptjs, JSON Web Tokens, helmet, express-rate-limit |
 | Photos | Cloudinary (signed uploads straight from the browser) |
-| Design | Baloo 2 and Hind fonts, "chalkboard and marigold" palette ([docs/Design.md](docs/Design.md)) |
+| Design | DM Serif Display and Hind fonts, "cream, olive and night" palette ([docs/Design.md](docs/Design.md)) |
 | Hosting | Netlify (frontend), Render (backend) |
 
 ## Architecture

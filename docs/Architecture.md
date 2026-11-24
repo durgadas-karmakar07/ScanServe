@@ -27,7 +27,7 @@ An order that is `ready` but not `paid` appears in the owner's unpaid list.
 | Layer | Choice |
 |---|---|
 | Language | JavaScript (ES modules everywhere, `"type": "module"`) |
-| Frontend | React 19 + Vite, React Router, Tailwind CSS v4 (`@tailwindcss/vite`), `socket.io-client`, `lucide-react` icons, `qrcode`, fonts Baloo 2 + Hind via `@fontsource` |
+| Frontend | React 19 + Vite, React Router, Tailwind CSS v4 (`@tailwindcss/vite`), `socket.io-client`, `lucide-react` icons, `qrcode`, fonts DM Serif Display + Hind via `@fontsource` |
 | Backend | Node.js 20+, Express 5, Mongoose, Socket.io, `zod`, `jsonwebtoken`, `bcryptjs`, `helmet`, `cors`, `express-rate-limit`, `dotenv`; photos on Cloudinary (signed browser uploads, no SDK) |
 | Database | MongoDB Atlas (free tier) |
 | Hosting | Frontend on Netlify, backend on Render (keeps a server running for Socket.io) |
@@ -56,18 +56,19 @@ scanserve/
 │       ├── context/           # authContext.js + AuthProvider.jsx, toastContext.js +
 │       │                      # ToastProvider.jsx (the toast), cartContext.js + CartProvider.jsx
 │       ├── hooks/             # useAuth.js, useToast.js, useFocusFirstError.js, useDevice.js,
-│       │                      # useCart.js, useActiveSection.js (scroll spy), useSocket.js, useWakeLock.js
+│       │                      # useCart.js, useModalDialog.js (native <dialog>), useSocket.js, useWakeLock.js
 │       ├── lib/               # format.js (₹), upi.js (UPI link), slug.js, tokenStorage.js,
 │       │                      # cartStorage.js, menu.js (group by category), deviceStorage.js,
 │       │                      # keyRepeatGuard.js, orderSound.js (Web Audio chime), upi.js
 │       └── features/
 │           ├── common/        # NotFoundPage
 │           ├── health/        # HealthPage (setup check, step 1.1)
-│           ├── customer/      # MenuPage, CustomerMenu, MenuHero, CategoryTabs, DishCard,
-│           │                  # OrderSummary, NameStep, CartBar, OrderStatusPage, PayPanel
+│           ├── customer/      # MenuPage, CustomerMenu, MenuHero, CategoryChips, DishCard,
+│           │                  # DishDetail, OrderSummary, NameStep, CartBar, OrderStatusPage, PayPanel
 │           ├── kitchen/       # KitchenPage (live board, sound, screen kept on), OrderCard
-│           └── owner/         # AuthLayout, RegisterPage, LoginPage, OwnerLayout (tabs),
-│               │              # QrPoster, SettingsPage, BrandingCard, UnpaidPage
+│           └── owner/         # AuthLayout, RegisterPage, LoginPage, OwnerLayout (night sidebar
+│               │              # on desktop, tabs on phones), OverviewPage, QrPoster,
+│               │              # SettingsPage, BrandingCard, UnpaidPage
 │               └── menu/      # MenuEditor, MenuItemRow, DishSheet, DeleteDishSheet
 └── server/
     ├── .env.example
@@ -100,7 +101,8 @@ scanserve/
 | `/m/:slug` | Menu + cart | Customer |
 | `/m/:slug/order/:orderId` | Order status + pay | Customer |
 | `/owner/register`, `/owner/login` | Create café / log in | Owner |
-| `/owner` | Owner area with tabs; redirects to `/owner/menu` | Owner |
+| `/owner` | Owner area (sidebar on desktop, tabs on phones); redirects to `/owner/overview` | Owner |
+| `/owner/overview` | Dashboard: today's orders and money, unpaid and kitchen counts, live order queue, menu cards with the sold-out switch | Owner |
 | `/owner/menu` | Menu editor: add, edit, delete dishes, sold-out switch | Owner |
 | `/owner/qr` | Printable QR poster for `<site>/m/<slug>` | Owner |
 | `/owner/settings` | Café name, UPI ID, taking orders on/off | Owner |
@@ -183,6 +185,14 @@ All responses are JSON. Errors: `{ "error": { "code": "ORDER_NOT_FOUND", "messag
 
 Paying is allowed only from `ready` (`new → ready → paid`; a paid order cannot be cancelled), through the same `changeOrderStatus` function with `scope: { deviceId }` for the phone and `{ restaurantId }` for the owner. Both emit `order:paid { orderId, paymentMethod, paidMarkedBy }` to the café's kitchen room and the phone. The customer's order responses now include the café's `upiId` (the public menu still does not). The pay panel builds `upi://pay?pa=<UPI ID>&pn=<café>&am=<total>.00&cu=INR&tn=Order <n>` with `URLSearchParams` (spaces as `%20`, `@` kept), shows "Pay ₹X to <UPI ID>" with a copy button as the fallback, and has separate "I've paid by UPI" and "Paying cash" taps, so an order is not marked paid if the UPI app is closed without paying. The unpaid list uses `GET /api/orders?status=ready` and updates live on `order:ready` (reload), `order:paid` and `order:cancelled` (remove).
 
+**Owner dashboard (premium redesign, 2026-11-24)**
+
+| Endpoint | Auth | Body | Success | Errors |
+|---|---|---|---|---|
+| `GET /api/orders/summary` | Owner | — | `200 { businessDate, today: { orders, cancelled, paidAmount, cashAmount, upiAmount }, open: { newCount, readyCount, unpaidAmount } }` | `401` |
+
+`today` covers orders of the current business day (`Asia/Kolkata`) at the token's café: `orders` leaves out cancelled ones, and the amounts add up the totals of today's orders that are `paid`, split by method. `open` covers every unpaid open order whatever its day: `newCount` is the kitchen's queue, `readyCount` and `unpaidAmount` are the unpaid list. It runs two aggregations; the `restaurantId` is cast to an `ObjectId` by hand because Mongoose does not cast aggregation pipelines. The owner layout loads it on every page change and again on each `order:*` socket event, and shows `newCount` / `readyCount` as live badges on Kitchen and Unpaid; the Overview page also loads the open queue with `GET /api/orders?status=new,ready`.
+
 **Live kitchen (step 1.6, 2026-11-24)**
 
 | Endpoint | Auth | Body | Success | Errors |
@@ -201,7 +211,7 @@ Kitchen `order` = `{ id, orderNumber, customerName, items: [{ name, price, qty }
 | `POST /api/public/:slug/orders` | Device (`X-Device-Id`); 10 a minute per IP and per device | `{ customerName (1–30 chars, any script, no control characters; "Guest" when skipped), items: [{ menuItemId, qty (1–20) }] }` (1–30 lines, each dish once, no other fields: prices and totals from the client are refused) | `201 { order, restaurant: { name, slug, logoUrl } }` | `400`, `401 DEVICE_REQUIRED` / `DEVICE_UNKNOWN`, `404 RESTAURANT_NOT_FOUND`, `409 NOT_ACCEPTING_ORDERS`, `409 TOO_MANY_OPEN_ORDERS` (2 open), `409 MENU_CHANGED` (dish gone or from another café), `409 ITEM_UNAVAILABLE` (names the sold-out dishes), `409 ORDER_IN_PROGRESS` (double tap), `429` |
 | `GET /api/public/orders/:id` | Device (must own it) | — | `200 { order, restaurant }` | `400`, `401`, `404 ORDER_NOT_FOUND` (also for someone else's order) |
 
-`order` = `{ id, orderNumber, customerName, items: [{ name, price, qty }], total, status, paymentMethod, createdAt, readyAt, paidAt, cancelledAt }` (no restaurant, device or menu item ids). Placing an order takes a 10-second lock on the device (`Device.orderLockUntil`), so a double tap or two tabs create one order and cannot get past the 2-open-orders limit; the request releases only its own lock. The order number comes from `DailyCounter` (one atomic `$inc` per order, business day in `Asia/Kolkata`) and a unique index on `(restaurantId, businessDate, orderNumber)`; a number may be skipped if saving then fails. The web app registers a device only when the phone places its first order (viewing the menu sends nothing), keeps `deviceId`, the first name and the last 5 order ids (per café) in `localStorage`, and retries once with a new device if the saved one is unknown. Until sockets arrive (step 1.6) the order status page checks again when the customer returns to it or taps Check status.
+`order` = `{ id, orderNumber, customerName, items: [{ name, price, qty }], total, status, paymentMethod, createdAt, readyAt, paidAt, cancelledAt }` (no restaurant, device or menu item ids). Placing an order takes a 10-second lock on the device (`Device.orderLockUntil`), so a double tap or two tabs create one order and cannot get past the 2-open-orders limit; the request releases only its own lock. The order number comes from `DailyCounter` (one atomic `$inc` per order, business day in `Asia/Kolkata`) and a unique index on `(restaurantId, businessDate, orderNumber)`; a number may be skipped if saving then fails. The web app registers a device only when the phone places its first order (viewing the menu sends nothing), keeps `deviceId` and the first name in `localStorage` (open orders come from `/orders/mine`), and retries once with a new device if the saved one is unknown. Until sockets arrive (step 1.6) the order status page checks again when the customer returns to it or taps Check status.
 
 Each signature is for exactly one photo. It covers `allowed_formats=jpg,jpeg,png,webp`, `overwrite=false`, `public_id=scanserve/<NODE_ENV>/<restaurantId>/<kind>/<random UUID>` (the server picks the id, so a reused signature can only send the same photo again), `timestamp` and `transformation=c_limit,w_1600,h_1600,q_auto:good,f_webp` (on arrival every photo is shrunk to at most 1600px, compressed and stored as WebP, which keeps logo transparency; Cloudinary may keep a gray-only photo as JPG). The signature cannot fix which Cloudinary endpoint is used (image, video, raw, auto are in the URL, not signed), so the signed `allowed_formats` is what refuses other file types everywhere; there is deliberately no `format` param, because with it Cloudinary converts other types instead of refusing them. Checked with real uploads: text files are refused on the raw and auto endpoints, even when named `.jpg`; a reused signature returns the existing photo (`existing=true`) and cannot overwrite it. The web app accepts only JPG, PNG and WebP up to 5 MB. Delivery URLs use `f_auto,q_auto` and one size per kind (dish 640×480, cover 1600×700, logo 256×256), which keeps bandwidth low on the free plan (25 credits a month; 1 credit = 1 GB stored or 1 GB delivered or 1,000 transformations).
 
@@ -216,6 +226,7 @@ Each signature is for exactly one photo. It covers `allowed_formats=jpg,jpeg,png
 | PATCH, DELETE | `/api/menu/:id` | Owner | Edit / delete, sold-out switch |
 | GET | `/api/orders?status=new,ready` | Owner | Kitchen board orders |
 | GET | `/api/orders?status=ready` | Owner | Unpaid list: ready orders not paid yet (any day, oldest first) |
+| GET | `/api/orders/summary` | Owner | Dashboard numbers: today's orders and money, open counts |
 | PATCH | `/api/orders/:id/ready` | Owner | The one kitchen tap |
 | PATCH | `/api/orders/:id/cancel` | Owner | Cancel |
 | PATCH | `/api/orders/:id/mark-paid` | Owner | Owner marks paid (`upi` / `cash`) |
