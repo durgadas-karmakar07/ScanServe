@@ -4,6 +4,7 @@ import NotFoundPage from './features/common/NotFoundPage.jsx';
 import MenuPage from './features/customer/MenuPage.jsx';
 import OrderStatusPage from './features/customer/OrderStatusPage.jsx';
 import HealthPage from './features/health/HealthPage.jsx';
+import KitchenPage from './features/kitchen/KitchenPage.jsx';
 import LoginPage from './features/owner/LoginPage.jsx';
 import MenuEditor from './features/owner/menu/MenuEditor.jsx';
 import OwnerLayout from './features/owner/OwnerLayout.jsx';
@@ -21,6 +22,7 @@ export default function App() {
       <Route path="/owner/login" element={<LoginPage />} />
       <Route path="/owner/register" element={<RegisterPage />} />
       <Route element={<RequireAuth />}>
+        <Route path="/kitchen" element={<KitchenPage />} />
         <Route path="/owner" element={<OwnerLayout />}>
           <Route index element={<Navigate to="menu" replace />} />
           <Route path="menu" element={<MenuEditor />} />

@@ -15,6 +15,7 @@ import Badge from '../../components/ui/Badge.jsx';
 import Button from '../../components/ui/Button.jsx';
 import Card from '../../components/ui/Card.jsx';
 import LinkButton from '../../components/ui/LinkButton.jsx';
+import { useSocket } from '../../hooks/useSocket.js';
 import { readDeviceId } from '../../lib/deviceStorage.js';
 import { formatRupees } from '../../lib/format.js';
 
@@ -24,7 +25,7 @@ const STATUS = {
     badge: 'New',
     tone: 'info',
     title: 'Being cooked',
-    text: 'Keep this page open. Tap Check status to see if it is ready.',
+    text: 'Keep this page open. It changes by itself when your order is ready.',
     Icon: ChefHat,
     box: 'border-border bg-surface',
   },
@@ -57,8 +58,9 @@ const STATUS = {
 const LOADING = { status: 'loading', order: null, restaurant: null, error: null };
 
 // /m/:slug/order/:orderId — the customer's order: number, status, items and total. Only the
-// phone that placed it can open it. Live updates arrive with step 1.6; until then the page
-// checks again when the customer comes back to it or taps Check status.
+// phone that placed it can open it. The café's Ready or Cancel arrives over the live connection
+// (the phone vibrates on Ready); the page also checks again when the customer comes back to it,
+// and Check status stays as a fallback.
 export default function OrderStatusPage() {
   const { slug, orderId } = useParams();
   const [deviceId] = useState(readDeviceId);
@@ -97,6 +99,21 @@ export default function OrderStatusPage() {
     document.addEventListener('visibilitychange', handleVisible);
     return () => document.removeEventListener('visibilitychange', handleVisible);
   }, []);
+
+  // Live news from the café, connected only while the order can still change. Each event just
+  // says "look again"; the order itself is always fetched over REST.
+  const canChange = state.status !== 'ready' || ['new', 'ready'].includes(state.order.status);
+  useSocket(deviceId && canChange ? { deviceId } : null, {
+    onConnect: () => setCheckCount((count) => count + 1),
+    'order:ready': ({ orderId: changedId }) => {
+      if (changedId !== orderId) return;
+      navigator.vibrate?.([200, 100, 200]);
+      setCheckCount((count) => count + 1);
+    },
+    'order:cancelled': ({ orderId: changedId }) => {
+      if (changedId === orderId) setCheckCount((count) => count + 1);
+    },
+  });
 
   const checkAgain = () => {
     if (isChecking) return;

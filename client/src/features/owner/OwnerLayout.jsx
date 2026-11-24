@@ -1,10 +1,12 @@
-import { LogOut, QrCode, Settings, UtensilsCrossed } from 'lucide-react';
+import { ChefHat, LogOut, QrCode, Settings, UtensilsCrossed } from 'lucide-react';
 import { NavLink, Outlet } from 'react-router';
 import Button from '../../components/ui/Button.jsx';
 import Wordmark from '../../components/Wordmark.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
 
+// Kitchen opens the full-screen live board (/kitchen) for the cooking counter.
 const TABS = [
+  { to: '/kitchen', label: 'Kitchen', Icon: ChefHat },
   { to: '/owner/menu', label: 'Menu', Icon: UtensilsCrossed },
   { to: '/owner/qr', label: 'QR poster', Icon: QrCode },
   { to: '/owner/settings', label: 'Settings', Icon: Settings },
@@ -27,7 +29,7 @@ export default function OwnerLayout() {
         <div className="mb-8 hidden lg:block">
           <Wordmark />
         </div>
-        <ul className="grid grid-cols-3 lg:flex lg:flex-col lg:gap-1">
+        <ul className="grid grid-cols-4 lg:flex lg:flex-col lg:gap-1">
           {TABS.map(({ to, label, Icon }) => (
             <li key={to}>
               <NavLink to={to} className={tabClass}>
