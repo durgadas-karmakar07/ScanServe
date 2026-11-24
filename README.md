@@ -25,7 +25,7 @@ In a small café with two or three people, the owner usually cooks, takes orders
 
 It is built for real tiny cafés, starting with one in Durgapur, West Bengal.
 
-**Live:** [scanserve-cafe.netlify.app](https://scanserve-cafe.netlify.app). Work in progress: café owners can create an account, build their menu and print a QR poster, and customers can open the menu from the QR (photos, categories, cart), place an order with no login, and the kitchen screen shows it live with a sound; one tap on Ready tells the customer's phone, and the customer pays after eating by UPI or cash while the owner sees an unpaid list. The whole Phase 1 loop works; a final test on a real phone with the printed QR is left. `/health` shows a setup check. The free API server sleeps when idle, so the first visit can take up to a minute.
+**Live:** [scanserve-cafe.netlify.app](https://scanserve-cafe.netlify.app). Phase 1 (the MVP) is complete: café owners can create an account, build their menu and print a QR poster, and customers can open the menu from the QR (photos, categories, cart), place an order with no login, and the kitchen screen shows it live with a sound; one tap on Ready tells the customer's phone, and the customer pays after eating by UPI or cash while the owner sees an unpaid list. Tested end to end on a real phone with the printed QR. `/health` shows a setup check. The free API server sleeps when idle, so the first visit can take up to a minute.
 
 ## Features
 
@@ -189,7 +189,7 @@ The full rule set is in [docs/Rules.md](docs/Rules.md#5-security-rules-strict-ne
 
 ## Roadmap
 
-- [ ] **Phase 1, MVP:** ordering, live kitchen, pay after eating, unpaid list (all built and tested; the final check on a real phone with the printed QR is left)
+- [x] **Phase 1, MVP:** ordering, live kitchen, pay after eating, unpaid list (done, tested on a real phone)
 - [ ] **Phase 2:** voice kitchen
 - [ ] **Phase 3:** daily hisab and owner tools
 - [ ] **Phase 4:** Hindi, Bengali and English; PWA; push notifications

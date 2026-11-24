@@ -63,11 +63,11 @@ Build in this order. Each step should run in the browser before moving on.
 
 ### 1.8 Deploy
 - [x] Backend on Render, frontend on Netlify, env vars set, CORS correct (done early, after 1.1)
-- [ ] Test on a real phone with the printed QR (developer, on the live site with mobile data; README screenshots and setup check done 2026-11-24)
+- [x] Test on a real phone with the printed QR (done on 2026-11-24: live site, mobile data, order → kitchen → Ready → paid cash → gone from the unpaid list)
 
 ### Phase 1 — Done when
 
-Status (2026-11-24): items 2–6, 8 and 9 checked (API tests, browser checks, Rules.md checklist, npm audit, README with screenshots and a setup tested on a fresh clone). Items 1 and 7 need the developer's real phone with mobile data and the printed QR.
+Status: **Phase 1 is done (2026-11-24).** Items 2–6, 8 and 9 were checked with API tests, browser checks, the Rules.md checklist, npm audit, and a README with screenshots and a setup tested on a fresh clone; items 1 and 7 were checked by the developer on a real phone with mobile data and the printed QR.
 
 1. On a phone, scan the QR → order 2 dishes → the order appears on the kitchen screen (another device) within 2 seconds.
 2. Tapping Ready makes the customer's page show "Ready" without a refresh.
