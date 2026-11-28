@@ -44,7 +44,7 @@ It is built for real tiny cafés, starting with one in Durgapur, West Bengal.
 | Owner's unpaid list, updated live | 1 | Done |
 | Owner dashboard: today's orders and money (cash / UPI), live order queue, kitchen and unpaid counts | 1 | Done |
 | Voice kitchen: orders read aloud, customer names called | 2 | Planned |
-| Daily hisab (accounts): cash vs UPI, top dishes, charts | 3 | Planned |
+| Daily hisab (accounts): past days, top dishes, charts, WhatsApp share (today's numbers are already on the dashboard) | 3 | Planned |
 | Hindi, Bengali and English, installable PWA, push notifications | 4 | Planned |
 | Khata (credit) for regular customers, counter TV display | 5 | Planned |
 

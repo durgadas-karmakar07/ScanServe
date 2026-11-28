@@ -59,7 +59,8 @@ scanserve/
 │       │                      # useCart.js, useModalDialog.js (native <dialog>), useSocket.js, useWakeLock.js
 │       ├── lib/               # format.js (₹), upi.js (UPI link), slug.js, tokenStorage.js,
 │       │                      # cartStorage.js, menu.js (group by category), deviceStorage.js,
-│       │                      # keyRepeatGuard.js, orderSound.js (Web Audio chime), upi.js
+│       │                      # keyRepeatGuard.js, orderSound.js (Web Audio chime),
+│       │                      # timeAgo.js ("5 min ago", "at 2:15 pm", "on 23 Nov")
 │       └── features/
 │           ├── common/        # NotFoundPage
 │           ├── health/        # HealthPage (setup check, step 1.1)
@@ -69,6 +70,8 @@ scanserve/
 │           └── owner/         # AuthLayout, RegisterPage, LoginPage, OwnerLayout (night sidebar
 │               │              # on desktop, tabs on phones), OverviewPage, QrPoster,
 │               │              # SettingsPage, BrandingCard, UnpaidPage
+│               ├── overview/  # TodayStats, StatCard, OrderQueue, QueueCard, MenuSection,
+│               │              # ProductCard (the parts of OverviewPage)
 │               └── menu/      # MenuEditor, MenuItemRow, DishSheet, DeleteDishSheet
 └── server/
     ├── .env.example
@@ -130,7 +133,7 @@ DailyCounter { restaurantId, date: 'YYYY-MM-DD', lastNumber }   // unique (resta
 RateLimitCounter { _id: '<limit prefix><key>', hits, expiresAt }   // daily upload limits; TTL deletes it
 ```
 
-**Indexes:** `Restaurant.slug` unique, `Staff.email` unique, `Staff.restaurantId`, `MenuItem (restaurantId, sortOrder)`, `Device.deviceId` unique, `DailyCounter (restaurantId, date)` unique, `Order (restaurantId, status)`, `Order (deviceId, createdAt)`, `RateLimitCounter.expiresAt` TTL (expire at that time).
+**Indexes:** `Restaurant.slug` unique, `Staff.email` unique, `Staff.restaurantId`, `MenuItem (restaurantId, sortOrder)`, `Device.deviceId` unique, `DailyCounter (restaurantId, date)` unique, `Order (restaurantId, status)`, `Order (restaurantId, status, paidAt)` (money collected today), `Order (deviceId, createdAt)`, `RateLimitCounter.expiresAt` TTL (expire at that time).
 
 **Order number:** `DailyCounter.findOneAndUpdate({ restaurantId, date }, { $inc: { lastNumber: 1 } }, { upsert: true, new: true })`. Business date uses the `Asia/Kolkata` time zone.
 
@@ -191,13 +194,13 @@ Paying is allowed only from `ready` (`new → ready → paid`; a paid order cann
 |---|---|---|---|---|
 | `GET /api/orders/summary` | Owner | — | `200 { businessDate, today: { orders, cancelled, paidAmount, cashAmount, upiAmount }, open: { newCount, readyCount, unpaidAmount } }` | `401` |
 
-`today` covers orders of the current business day (`Asia/Kolkata`) at the token's café: `orders` leaves out cancelled ones, and the amounts add up the totals of today's orders that are `paid`, split by method. `open` covers every unpaid open order whatever its day: `newCount` is the kitchen's queue, `readyCount` and `unpaidAmount` are the unpaid list. It runs two aggregations; the `restaurantId` is cast to an `ObjectId` by hand because Mongoose does not cast aggregation pipelines. The owner layout loads it on every page change and again on each `order:*` socket event, and shows `newCount` / `readyCount` as live badges on Kitchen and Unpaid; the Overview page also loads the open queue with `GET /api/orders?status=new,ready`.
+`today` covers the current business day (`Asia/Kolkata`) at the token's café: `orders` and `cancelled` count orders placed today (`businessDate`, cancelled ones left out of `orders`); the amounts add up orders **paid** today (`paidAt` within the day, whatever day they were placed, so cash taken today for yesterday's unpaid order is in today's total), split by method. `open` covers every unpaid open order whatever its day: `newCount` is the kitchen's queue, `readyCount` and `unpaidAmount` are the unpaid list. It runs three aggregations in parallel; the `restaurantId` is cast to an `ObjectId` by hand because Mongoose does not cast aggregation pipelines, and `businessDayRange()` in `counter.service.js` turns the business day into a UTC range. The owner layout loads it on mount, on every socket (re)connect and 1 s after the last of a burst of `order:*` events (one request per burst, because the API limit is per IP), and shows `newCount` / `readyCount` as live badges on Kitchen and Unpaid. If a load fails, the Overview says so with Try again (the last numbers stay). The Overview page also loads the open queue with `GET /api/orders?status=new,ready` (cooking orders shown first; a failed reload keeps the cards).
 
 **Live kitchen (step 1.6, 2026-11-24)**
 
 | Endpoint | Auth | Body | Success | Errors |
 |---|---|---|---|---|
-| `GET /api/orders?status=new` | Owner | — (`status` is a comma list of `new`, `ready`, `paid`, `cancelled`; default `new`) | `200 { orders }` oldest first, at most 100, only the token's café | `400`, `401` |
+| `GET /api/orders?status=new` | Owner | — (`status` is a comma list of `new`, `ready`, `paid`, `cancelled`; default `new`) | `200 { orders, count, amount, hasMore }` oldest first (`order=newest` for newest first), at most 200 (`count` and `amount` cover all matches), only the token's café | `400`, `401` |
 | `PATCH /api/orders/:id/ready` | Owner | — | `200 { order }`; repeating it returns the same order (double tap is harmless) | `400`, `401`, `404 ORDER_NOT_FOUND` (also another café's order), `409 INVALID_STATUS_CHANGE` |
 | `PATCH /api/orders/:id/cancel` | Owner | — | `200 { order }` (from `new` or `ready`; repeating is harmless) | same as above |
 
@@ -224,15 +227,16 @@ Each signature is for exactly one photo. It covers `allowed_formats=jpg,jpeg,png
 | PATCH | `/api/restaurant` | Owner | Name, UPI ID, accepting orders on/off |
 | GET, POST | `/api/menu` | Owner | List / add dishes |
 | PATCH, DELETE | `/api/menu/:id` | Owner | Edit / delete, sold-out switch |
-| GET | `/api/orders?status=new,ready` | Owner | Kitchen board orders |
-| GET | `/api/orders?status=ready` | Owner | Unpaid list: ready orders not paid yet (any day, oldest first) |
+| GET | `/api/orders?status=new` | Owner | Kitchen board: new orders, oldest first |
+| GET | `/api/orders?status=new,ready` | Owner | Overview order queue: new and ready orders, oldest first |
+| GET | `/api/orders?status=ready&order=newest` | Owner | Unpaid list: ready orders not paid yet (any day, newest first) |
 | GET | `/api/orders/summary` | Owner | Dashboard numbers: today's orders and money, open counts |
 | PATCH | `/api/orders/:id/ready` | Owner | The one kitchen tap |
 | PATCH | `/api/orders/:id/cancel` | Owner | Cancel |
 | PATCH | `/api/orders/:id/mark-paid` | Owner | Owner marks paid (`upi` / `cash`) |
 | POST | `/api/auth/logout-all` | Owner | Log out everywhere: raises `tokenVersion`, cuts the café's kitchen sockets |
 | POST | `/api/devices` | — | Create or confirm a device ID |
-| GET | `/api/public/:slug/menu` | — | Restaurant info + available dishes |
+| GET | `/api/public/:slug/menu` | — | Restaurant info + all dishes (sold-out ones flagged) |
 | POST | `/api/public/:slug/orders` | Device | Place order: `{ customerName, items: [{ menuItemId, qty }] }` |
 | GET | `/api/public/:slug/orders/mine` | Device | This phone's open orders at the café (links on the menu) |
 | GET | `/api/public/orders/:id` | Device (must own it) | Order status |

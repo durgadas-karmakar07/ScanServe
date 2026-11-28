@@ -93,7 +93,7 @@ Status: **Phase 1 is done (2026-11-24).** Items 2–6, 8 and 9 were checked with
 **Done when:** a cook can run 5 orders without looking at the screen except to tap Ready.
 
 ## Phase 3 — Hisab & owner tools
-- Daily hisab page: total, cash vs UPI, order count, top dishes, unpaid total (Recharts allowed from this phase)
+- Daily hisab page: total, cash vs UPI, order count, top dishes, unpaid total (Recharts allowed from this phase). Today's total, cash vs UPI, order count and unpaid total already show on the owner Overview (premium redesign, 2026-11-24, at the developer's request for a dashboard); Phase 3 adds past days, top dishes, charts and sharing
 - "Marked paid by customer" vs "confirmed by owner" shown separately
 - "Share today's hisab" to WhatsApp (`https://wa.me/?text=...`)
 - Owner quick-add with big dish buttons for spoken orders

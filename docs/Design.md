@@ -14,7 +14,7 @@ Visual direction (2026-11-24): **"cream, olive and night"**, a premium café-men
 
 ## 2. Colour palette
 
-All text/background pairs used for text meet WCAG AA (4.5:1). White on burnt orange is 4.6:1, so it is fine for button text.
+All text/background pairs used for text meet WCAG AA (4.5:1). White on burnt orange is 4.6:1, so it is fine for button text and count badges. Soft chips use the darker shade for their text: `accent-hover` on `accent-soft` is 5.0:1 ("Cooking"); "Ready · unpaid" is white on `success` (5.1:1). Muted text is not used on tinted boxes (it drops under 4.5:1 there). Text on a photo sits on a night wash that is at least 65% dark behind the text.
 
 | Token | Hex | Name | Use |
 |---|---|---|---|
@@ -22,8 +22,9 @@ All text/background pairs used for text meet WCAG AA (4.5:1). White on burnt ora
 | `primary-hover` | `#2F3919` | | Hover |
 | `primary-soft` | `#E9ECDD` | | Quantity control wash, letter tiles on cream |
 | `accent` | `#C2541F` | Burnt orange | Explore menu, View order, Open kitchen, count badges, stat icons |
-| `accent-hover` | `#A8461A` | | Hover |
-| `accent-soft` | `#FBE9DF` | | Stat icon circles, "Cooking" chip |
+| `accent-hover` | `#A8461A` | | Hover; text on `accent-soft` ("Cooking" chip) |
+| `accent-soft` | `#FBE9DF` | | Stat icon circles, "Cooking" chip background |
+| `accent-on-night` | `#F08A5D` | | The active icon in the night sidebar |
 | `bg` | `#F5F0E8` | Cream | Page background |
 | `surface` | `#FFFFFF` | White | Cards |
 | `surface-warm` | `#FBF8F3` | | Sheets, chips, the dish page's bottom bar |
@@ -32,7 +33,11 @@ All text/background pairs used for text meet WCAG AA (4.5:1). White on burnt ora
 | `text-muted` | `#6E655C` | | Secondary text |
 | `night` | `#1C1714` | Night | Hero wash, dark dish cards, owner sidebar, cart bar, kitchen |
 | `night-soft` | `#2A221D` | | Kitchen cards, letter tiles on dark |
-| `success` | `#2E7D4F` | | Taking orders, Ready, Paid, veg mark |
+| `kitchen-bg`, `kitchen-card` | same as `night`, `night-soft` | | Kitchen board background and cards |
+| `live` | `#7BD389` | | The "Taking orders" dot on the dark hero |
+| `success` | `#2E7D4F` | | Taking orders, Ready, Paid, "Ready · unpaid" chip |
+| `veg` | `#2E7D4F` | | Veg mark |
+| `info` | `#1D4ED8` | | "New" badge |
 | `warning` | `#B45309` | | Orders waiting 10+ minutes, reconnecting |
 | `danger` | `#B3261E` | | Errors, Cancel, non-veg mark, not taking orders |
 
@@ -58,17 +63,17 @@ Cards use a soft shadow (`shadow-card`) instead of a border.
 
 | Component | Spec |
 |---|---|
-| Button | Pill, min height 52px, 18px / 600. Variants: primary (olive), accent (burnt orange, white text), secondary (white with border), light (white on dark), danger |
-| Customer hero | Full-bleed cover photo under a night gradient; logo circle and "Taking orders" pill at the top; "Welcome to", the café name in serif, the tagline, and an orange "Explore menu" pill with a dark arrow circle that scrolls to the menu. Without a photo: night with the café's initial drawn faintly |
-| Menu panel | Cream panel with 32px rounded top corners sliding up over the hero; "Our menu" title, dish count, sticky category chips (All + categories, active chip olive), dish grid |
+| Button | Pill, min height 52px, 18px / 600. Variants: primary (olive), accent (burnt orange, white text), secondary (white with border), light (white on dark), danger. Sizes: `md` (default) and `compact` (less padding, 16px text on phones) for a button that shares its row; padding and text size are set by the size prop, never by className, because Tailwind classes for the same property clash instead of replacing each other |
+| Customer hero | Full-bleed cover photo under a night gradient; logo circle and a solid dark "Taking orders" pill at the top; "Welcome to", the café name in serif, the tagline, and an orange "Explore menu" pill with a dark arrow circle that scrolls to the menu. Without a photo: night with the café's initial drawn faintly |
+| Menu panel | Cream panel with 32px rounded top corners sliding up over the hero; "Our menu" title, dish count, sticky category chips (48px; All + categories, active chip olive; choosing one brings that category's start up under the chips), dish grid |
 | Dish card | Dark (night) card, photo on top (4:3), veg mark on a white chip, name and price in white, a round white "+" (48px); once added, a − 2 + control on a soft white wash; sold out: dimmed photo and a "Sold out" chip, no "+" |
-| Dish page | Full screen on phones (a centred card on larger screens), big photo with rounded bottom corners, back button, name in serif, category in small capitals, price, description, "Remove from order" when in the cart; bottom bar with a quantity control and "Add to order │ ₹total" (olive). A native `<dialog>`: Android back and Escape close it |
+| Dish page | Full screen on phones (a centred card on larger screens), big photo with rounded bottom corners, back button, name in serif, category in small capitals, price, description, "Remove from order" when in the cart; bottom bar with a quantity control and "Add to order │ ₹total" (olive, compact button so the words fit at 360px). A native `<dialog>`: Android back and Escape close it. It announces quantity changes and shows its own messages (the page's toast is hidden behind a modal dialog); when the order already has 30 different dishes it says so instead of showing the bar |
 | Cart bar | Night pill at the bottom of phones: item count and total, orange "View order" |
 | Sheet | Rises from the bottom on phones (rounded top, grab handle), centred on larger screens; serif title |
 | Pay panel | Shown once the order is ready: total in large text, olive "Pay with UPI", "Pay ₹X to <UPI ID>" with Copy UPI ID, then "I've paid by UPI" / "Paying cash" |
 | Owner sidebar | Desktop: night sidebar with the ScanServe mark, "Manage" nav (Overview, Kitchen, Unpaid, Menu, QR poster, Settings) with live orange count badges, and the café card (logo, name, Customer menu, Log out) at the bottom |
 | Stat card | White card, icon in an orange-soft circle, label, large value, short hint; links to its page when there is one |
-| Queue card | White card: orange `#number` and time, customer name, a Cooking (orange) or "Ready · unpaid" (green) chip with a dot, items and total |
+| Queue card | White card: orange `#number` and time ("5 min ago", "at 2:15 pm", "on 23 Nov"; ready cards count from when they became ready), customer name, a Cooking chip (dark orange on soft orange) or "Ready · unpaid" chip (white on green) with a dot, items and total. Cooking orders come first, then ready-but-unpaid ones |
 | Product card | White card, inset photo with the price on a white chip, "Sold out" chip, veg mark and name, one line of description, "Available today" switch |
 | Badge | Pill, 14px / 600: New (`info`), Ready (`success`), Paid / Sold out (`border` bg), Cancelled (`danger`) |
 | Toast | Bottom of the screen, 3 seconds, one line of plain language |
@@ -111,7 +116,7 @@ Owner (/owner/overview), desktop
 └──────────────┴───────────────────────────────────────────────────────┘
 ```
 
-Owner area on phones: a top bar (café logo and name, Log out) and bottom tabs **Overview · Kitchen · Unpaid · Menu · Settings** with live badges; QR poster is reached from Overview and Settings. Kitchen (`/kitchen`) stays a full-screen dark board: cards for new orders, oldest first, huge serif numbers, one big green Ready button per order.
+Owner area on phones: a top bar (café logo and name, Log out) and bottom tabs **Overview · Kitchen · Unpaid · Menu · Settings** with live badges (the current tab has olive text and an olive bar on top, not colour alone); QR poster is reached from Overview and Settings ("Print QR poster"). Kitchen (`/kitchen`) stays a full-screen dark board: cards for new orders, oldest first, huge serif numbers, one big green Ready button per order.
 
 ## 6. Responsive breakpoints
 
