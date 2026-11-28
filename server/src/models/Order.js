@@ -42,6 +42,9 @@ const orderSchema = new mongoose.Schema(
 
 orderSchema.index({ restaurantId: 1, status: 1 });
 orderSchema.index({ deviceId: 1, createdAt: -1 });
+// "Collected today" on the owner dashboard: a café's paid orders within one day's paidAt range,
+// without reading every paid order the café has ever had.
+orderSchema.index({ restaurantId: 1, status: 1, paidAt: 1 });
 // A number is never given out twice on the same day, even if something goes wrong.
 orderSchema.index({ restaurantId: 1, businessDate: 1, orderNumber: 1 }, { unique: true });
 // One order per checkout id per phone (orders without a checkout id are not indexed).
