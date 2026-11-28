@@ -227,7 +227,7 @@ export default function OrderStatusPage() {
         <div className="flex min-w-0 flex-col items-start gap-1">
           <Badge tone={status.tone}>{status.badge}</Badge>
           <p className="font-serif text-h2">{title}</p>
-          <p className="text-text-muted">{status.text}</p>
+          <p>{status.text}</p>
         </div>
       </div>
 

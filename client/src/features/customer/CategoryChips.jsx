@@ -2,7 +2,7 @@
 // category. Choosing one shows only that category's dishes. Stays at the top while scrolling.
 export default function CategoryChips({ categories, selected, onSelect }) {
   const chipClass = (isActive) =>
-    `min-h-11 shrink-0 rounded-full px-4 text-base font-semibold whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${isActive ? 'bg-primary text-white' : 'border border-border bg-surface-warm text-text hover:bg-surface'}`;
+    `min-h-12 shrink-0 rounded-full px-4 text-base font-semibold whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${isActive ? 'bg-primary text-white' : 'border border-border bg-surface-warm text-text hover:bg-surface'}`;
 
   return (
     <div

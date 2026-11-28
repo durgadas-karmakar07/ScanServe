@@ -2,7 +2,7 @@
 
 /* Design tokens ("cream, olive and night"): keep in sync with docs/Design.md */
 @theme {
-  /* Olive: the main action (Add to Order, View order, active chip) */
+  /* Olive: actions that commit (Add to order, Place order, Save) and the active chip */
   --color-primary: #3e4a24;
   --color-primary-hover: #2f3919;
   --color-primary-soft: #e9ecdd;
@@ -10,6 +10,8 @@
   --color-accent: #c2541f;
   --color-accent-hover: #a8461a;
   --color-accent-soft: #fbe9df;
+  /* A lighter orange that stands out on night (the active icon in the owner sidebar) */
+  --color-accent-on-night: #f08a5d;
   /* Cream page, white cards, warm ink */
   --color-bg: #f5f0e8;
   --color-surface: #ffffff;
@@ -20,7 +22,8 @@
   /* Night: photo overlays, dark dish cards, the owner sidebar and the kitchen */
   --color-night: #1c1714;
   --color-night-soft: #2a221d;
-  --color-night-line: #3b3029;
+  /* The "Taking orders" dot on the dark hero: a light green that shows on night */
+  --color-live: #7bd389;
   --color-success: #2e7d4f;
   --color-warning: #b45309;
   --color-danger: #b3261e;

@@ -71,7 +71,7 @@ export default function PayPanel({ order, restaurant, onPaid }) {
       <div className="flex flex-wrap items-center gap-x-2 text-text-muted">
         <span>
           No UPI app opened? Pay {formatRupees(order.total)} to{' '}
-          <strong className="break-words text-text">{restaurant.upiId}</strong>
+          <strong className="wrap-anywhere text-text">{restaurant.upiId}</strong>
         </span>
         <button
           type="button"

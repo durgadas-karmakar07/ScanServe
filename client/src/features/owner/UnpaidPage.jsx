@@ -8,20 +8,12 @@ import { useAuth } from '../../hooks/useAuth.js';
 import { useSocket } from '../../hooks/useSocket.js';
 import { useToast } from '../../hooks/useToast.js';
 import { formatRupees } from '../../lib/format.js';
+import { timeAgo } from '../../lib/timeAgo.js';
 
 const CLOCK_TICK_MS = 30_000;
 
 // "Ready 12 min ago", or the date for orders from an earlier day.
-function readyLabel(order, now) {
-  const readyAt = new Date(order.readyAt ?? order.createdAt);
-  const minutes = Math.floor((now - readyAt.getTime()) / 60_000);
-  if (minutes < 1) return 'Ready just now';
-  if (minutes < 60) return `Ready ${minutes} min ago`;
-  const isToday = readyAt.toDateString() === new Date(now).toDateString();
-  return isToday
-    ? `Ready at ${readyAt.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })}`
-    : `Ready on ${readyAt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`;
-}
+const readyLabel = (order, now) => `Ready ${timeAgo(order.readyAt ?? order.createdAt, now)}`;
 
 // /owner/unpaid — orders that are ready but not paid yet (PRD: pay after eating is trust-based,
 // so the owner can see who still has to pay and mark it paid). Updates live: a new Ready adds an

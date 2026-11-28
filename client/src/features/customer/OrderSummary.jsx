@@ -86,7 +86,7 @@ export default function OrderSummary({
       {placeError && <Alert ref={alertRef}>{placeError}</Alert>}
       {cart.entries.length === 0 ? (
         <p className="text-text-muted">
-          Your order is empty. Tap <strong className="text-text">Add</strong> on a dish to start.
+          Your order is empty. Tap <strong className="text-text">+</strong> on a dish to start.
         </p>
       ) : (
         <div className="flex flex-col gap-4">

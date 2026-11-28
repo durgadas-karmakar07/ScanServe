@@ -24,7 +24,7 @@ export default function MenuHero({ restaurant, menuId }) {
           {name.trim().charAt(0).toUpperCase()}
         </span>
       )}
-      <div className="absolute inset-0 -z-10 bg-linear-to-b from-night/55 via-night/35 to-night/95" />
+      <div className="absolute inset-0 -z-10 bg-linear-to-b from-night/55 via-night/65 via-40% to-night/95" />
 
       <div className="mx-auto flex min-h-[min(64dvh,560px)] max-w-[1200px] flex-col px-5 pt-5 pb-14 sm:px-8">
         <div className="flex items-center justify-between gap-3">
@@ -43,18 +43,18 @@ export default function MenuHero({ restaurant, menuId }) {
             </span>
           )}
           <p
-            className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-base font-semibold backdrop-blur ${isAcceptingOrders ? 'bg-white/15' : 'bg-danger/80'}`}
+            className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-base font-semibold backdrop-blur ${isAcceptingOrders ? 'bg-night/70' : 'bg-danger/80'}`}
           >
             <span
               aria-hidden="true"
-              className={`size-2 rounded-full ${isAcceptingOrders ? 'bg-[#7bd389]' : 'bg-white/70'}`}
+              className={`size-2 rounded-full ${isAcceptingOrders ? 'bg-live' : 'bg-white/70'}`}
             />
             {isAcceptingOrders ? 'Taking orders' : 'Not taking orders now'}
           </p>
         </div>
 
         <div className="mt-auto flex max-w-[34rem] flex-col items-start gap-4 pt-16">
-          <p className="text-eyebrow font-semibold text-white/75 uppercase">Welcome to</p>
+          <p className="text-eyebrow font-semibold text-white/90 uppercase">Welcome to</p>
           <h1 className="text-[2.75rem] leading-[1.02] break-words sm:text-[3.5rem]">{name}</h1>
           {tagline && <p className="text-lg break-words text-white/85">{tagline}</p>}
           <a

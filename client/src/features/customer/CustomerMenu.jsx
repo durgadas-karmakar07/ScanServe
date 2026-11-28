@@ -20,6 +20,9 @@ import MenuHero from './MenuHero.jsx';
 import OrderSummary from './OrderSummary.jsx';
 
 const MENU_ID = 'our-menu';
+// Height of the sticky chip bar (48px chips + 12px padding above and below); the sections'
+// scroll-mt-18 (72px) keeps a scrolled-to section from hiding under it.
+const CHIPS_HEIGHT_PX = 72;
 const LOADING = { status: 'loading', restaurant: null, items: [], error: null };
 // The phone's device ID was not accepted: get a new one and try once more.
 const DEVICE_ERRORS = ['DEVICE_REQUIRED', 'DEVICE_UNKNOWN'];
@@ -99,6 +102,19 @@ export default function CustomerMenu({ slug }) {
   const [category, setCategory] = useState(null);
   const visibleGroups = groups.filter(([name]) => category === null || name === category);
   const shownGroups = visibleGroups.length > 0 ? visibleGroups : groups;
+  const listStartRef = useRef(null);
+
+  // If the customer has scrolled into the list (the chips are stuck at the top), bring the start
+  // of the chosen category back up under the chips; otherwise they land mid-list.
+  const chooseCategory = (name) => {
+    setCategory(name);
+    requestAnimationFrame(() => {
+      const listStart = listStartRef.current;
+      if (!listStart || listStart.getBoundingClientRect().top >= CHIPS_HEIGHT_PX) return;
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      listStart.scrollIntoView({ block: 'start', behavior: reduceMotion ? 'auto' : 'smooth' });
+    });
+  };
   // The dish whose page is open, if any.
   const [detailItem, setDetailItem] = useState(null);
 
@@ -287,15 +303,20 @@ export default function CustomerMenu({ slug }) {
               <CategoryChips
                 categories={groups.map(([name]) => name)}
                 selected={visibleGroups.length > 0 ? category : null}
-                onSelect={setCategory}
+                onSelect={chooseCategory}
               />
             )}
 
             {groups.length === 0 && (
               <p className="text-text-muted">The menu is being prepared. Please check back soon.</p>
             )}
-            {shownGroups.map(([name, items]) => (
-              <section key={name} aria-label={name} className="flex flex-col gap-3">
+            {shownGroups.map(([name, items], index) => (
+              <section
+                key={name}
+                ref={index === 0 ? listStartRef : undefined}
+                aria-label={name}
+                className="flex scroll-mt-18 flex-col gap-3"
+              >
                 <h3 className="font-serif text-h2 break-words">{name}</h3>
                 <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
                   {items.map((item) => (
@@ -345,6 +366,8 @@ export default function CustomerMenu({ slug }) {
           item={detailItem}
           quantity={lines[detailItem.id] ?? 0}
           maxQuantity={maxQuantity}
+          maxLines={maxLines}
+          isOrderFull={!(detailItem.id in lines) && Object.keys(lines).length >= maxLines}
           isOrderingOpen={isOrderingOpen}
           onSetQuantity={(quantity) => changeQuantity(detailItem.id, quantity)}
           onClose={() => setDetailItem(null)}

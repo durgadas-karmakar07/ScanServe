@@ -8,12 +8,22 @@ import {
   Settings,
   UtensilsCrossed,
 } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { NavLink, Outlet } from 'react-router';
 import { getOrderSummary } from '../../api/orders.js';
 import Wordmark from '../../components/Wordmark.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useSocket } from '../../hooks/useSocket.js';
+
+// Order events often come in bursts (a Ready, then a Paid); wait this long after the last one
+// before loading the numbers again, so a burst costs one request (the API limit is per IP).
+const REFRESH_DELAY_MS = 1_000;
+
+// What a count badge means, for screen readers (the badge itself only shows the number).
+const BADGE_TEXT = {
+  newCount: (count) => `${count} ${count === 1 ? 'order' : 'orders'} waiting`,
+  readyCount: (count) => `${count} ${count === 1 ? 'order' : 'orders'} to collect`,
+};
 
 // isTab: also shown in the phone's bottom tabs (QR poster is reached from Overview and Settings
 // there, so five tabs fit). badge: which live count to show next to it.
@@ -58,38 +68,50 @@ function CafeMark({ restaurant, className }) {
 // tick that changes on every live event, to the page inside (Outlet context).
 export default function OwnerLayout() {
   const { restaurant, logout, token, withAuth } = useAuth();
-  const location = useLocation();
-  const [summary, setSummary] = useState(null);
+  // The last numbers stay on screen when a refresh fails; the error is shown next to them.
+  const [summary, setSummary] = useState({ data: null, error: null });
   const [liveTick, setLiveTick] = useState(0);
-  const bump = useCallback(() => setLiveTick((tick) => tick + 1), []);
+  const refreshTimer = useRef(null);
+  const refreshNow = useCallback(() => setLiveTick((tick) => tick + 1), []);
+  const refreshSoon = useCallback(() => {
+    clearTimeout(refreshTimer.current);
+    refreshTimer.current = setTimeout(refreshNow, REFRESH_DELAY_MS);
+  }, [refreshNow]);
+  useEffect(() => () => clearTimeout(refreshTimer.current), []);
 
   useSocket(token ? { token } : null, {
-    onConnect: bump,
+    // Events may have been missed while disconnected, so load again on every (re)connect.
+    onConnect: refreshSoon,
     // The login is no longer valid: the next request answers 401, which logs out.
-    onRefused: bump,
-    'order:new': bump,
-    'order:ready': bump,
-    'order:paid': bump,
-    'order:cancelled': bump,
+    onRefused: refreshNow,
+    'order:new': refreshSoon,
+    'order:ready': refreshSoon,
+    'order:paid': refreshSoon,
+    'order:cancelled': refreshSoon,
   });
 
   useEffect(() => {
     const controller = new AbortController();
     withAuth(getOrderSummary, { signal: controller.signal })
-      .then(setSummary)
-      // The counts are a convenience; the pages show their own errors.
-      .catch(() => {});
+      .then((data) => {
+        if (controller.signal.aborted || !data) return;
+        setSummary({ data, error: null });
+      })
+      .catch((err) => {
+        if (controller.signal.aborted || err.name === 'AbortError') return;
+        setSummary((current) => ({ ...current, error: err }));
+      });
     return () => controller.abort();
-  }, [withAuth, liveTick, location.pathname]);
+  }, [withAuth, liveTick]);
 
-  const countFor = (key) => (key && summary ? summary.open[key] : 0);
+  const countFor = (key) => (key && summary.data ? summary.data.open[key] : 0);
   const menuLink = `/m/${restaurant.slug}`;
 
   return (
     <div className="min-h-dvh lg:flex">
       <aside className="hidden print:hidden lg:sticky lg:top-0 lg:flex lg:h-dvh lg:w-72 lg:shrink-0 lg:flex-col lg:bg-night lg:p-5 lg:text-white">
         <Wordmark tone="dark" />
-        <p className="mt-9 mb-2 px-3 text-eyebrow font-semibold text-white/45 uppercase">Manage</p>
+        <p className="mt-9 mb-2 px-3 text-eyebrow font-semibold text-white/55 uppercase">Manage</p>
         <nav aria-label="Owner sections">
           <ul className="flex flex-col gap-1">
             {NAV.map(({ to, label, Icon, badge }) => {
@@ -107,14 +129,19 @@ export default function OwnerLayout() {
                         <Icon
                           size={22}
                           aria-hidden="true"
-                          className={isActive ? 'text-[#f08a5d]' : undefined}
+                          className={isActive ? 'text-accent-on-night' : undefined}
                         />
                         <span className="flex-1">{label}</span>
                         {count > 0 && (
-                          <span className="min-w-7 rounded-full bg-accent px-2 text-center text-sm leading-6 tabular-nums">
-                            {count}
-                            <span className="sr-only"> waiting</span>
-                          </span>
+                          <>
+                            <span
+                              aria-hidden="true"
+                              className="min-w-7 rounded-full bg-accent px-2 text-center text-sm leading-6 text-white tabular-nums"
+                            >
+                              {count}
+                            </span>
+                            <span className="sr-only">, {BADGE_TEXT[badge](count)}</span>
+                          </>
                         )}
                       </>
                     )}
@@ -134,7 +161,7 @@ export default function OwnerLayout() {
             href={menuLink}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/15 text-base font-semibold text-white/85 hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-white"
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-white/15 text-base font-semibold text-white/85 hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-white"
           >
             <ExternalLink size={18} aria-hidden="true" />
             Customer menu
@@ -142,7 +169,7 @@ export default function OwnerLayout() {
           <button
             type="button"
             onClick={logout}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full text-base font-semibold text-white/65 hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-white"
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full text-base font-semibold text-white/65 hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-white"
           >
             <LogOut size={18} aria-hidden="true" />
             Log out
@@ -167,7 +194,14 @@ export default function OwnerLayout() {
         </header>
 
         <main className="mx-auto flex w-full max-w-[1120px] flex-col gap-6 px-4 pt-5 pb-28 lg:px-10 lg:py-8 print:max-w-none print:p-0">
-          <Outlet context={{ summary, liveTick }} />
+          <Outlet
+            context={{
+              summary: summary.data,
+              summaryError: summary.error,
+              refreshSummary: refreshNow,
+              liveTick,
+            }}
+          />
         </main>
       </div>
 
@@ -186,16 +220,30 @@ export default function OwnerLayout() {
                     `relative flex min-h-16 flex-col items-center justify-center gap-1 text-sm font-semibold focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary ${isActive ? 'text-primary' : 'text-text-muted hover:text-text'}`
                   }
                 >
-                  <span className="relative">
-                    <Icon size={24} aria-hidden="true" />
-                    {count > 0 && (
-                      <span className="absolute -top-1.5 -right-3 min-w-5 rounded-full bg-accent px-1 text-center text-xs leading-5 text-white tabular-nums">
-                        {count}
-                        <span className="sr-only"> waiting</span>
+                  {({ isActive }) => (
+                    <>
+                      {/* The current tab is marked by a bar as well as by colour */}
+                      {isActive && (
+                        <span
+                          aria-hidden="true"
+                          className="absolute inset-x-4 top-0 h-[3px] rounded-b-full bg-primary"
+                        />
+                      )}
+                      <span className="relative">
+                        <Icon size={24} aria-hidden="true" />
+                        {count > 0 && (
+                          <span
+                            aria-hidden="true"
+                            className="absolute -top-1.5 -right-3 min-w-5 rounded-full bg-accent px-1 text-center text-xs leading-5 text-white tabular-nums"
+                          >
+                            {count}
+                          </span>
+                        )}
                       </span>
-                    )}
-                  </span>
-                  {label}
+                      {label}
+                      {count > 0 && <span className="sr-only">, {BADGE_TEXT[badge](count)}</span>}
+                    </>
+                  )}
                 </NavLink>
               </li>
             );

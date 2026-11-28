@@ -12,10 +12,15 @@ import { formatRupees } from '../../lib/format.js';
 // the bottom a quantity control with "Add to order | ₹total". It is a native <dialog>, so the
 // Android back gesture and Escape close it, and focus returns to the dish card.
 // onSetQuantity(n) sets the dish's quantity in the cart and returns false if the cart refused.
+// isOrderFull: the dish is not in the order and the order already has maxLines dishes.
+// Everything outside a modal dialog is hidden (and drawn under it), so the page's toast and
+// live region cannot be seen or heard here: this dialog says things itself.
 export default function DishDetail({
   item,
   quantity,
   maxQuantity,
+  maxLines,
+  isOrderFull,
   isOrderingOpen,
   onSetQuantity,
   onClose,
@@ -24,13 +29,25 @@ export default function DishDetail({
   const titleId = useId();
   const isInCart = quantity > 0;
   const [count, setCount] = useState(isInCart ? quantity : 1);
+  // Read out by screen readers after each + / −; empty on open so nothing is read then.
+  const [countMessage, setCountMessage] = useState('');
+  const [isRefused, setIsRefused] = useState(false);
   const canOrder = item.isAvailable && isOrderingOpen;
+  const fullMessage = `Your order already has ${maxLines} different dishes, the most for one order. Place it, or remove a dish first.`;
 
   // Closing the dialog fires its close event, which calls onClose.
   const close = () => dialogRef.current?.close();
 
+  const changeCount = (next) => {
+    setCount(next);
+    setCountMessage(`${next} ${item.name}, ${formatRupees(item.price * next)}`);
+  };
+
   const confirm = () => {
-    if (onSetQuantity(count) === false) return;
+    if (onSetQuantity(count) === false) {
+      setIsRefused(true);
+      return;
+    }
     close();
   };
 
@@ -101,7 +118,18 @@ export default function DishDetail({
           </div>
         </div>
 
-        {canOrder && (
+        <p className="sr-only" role="status">
+          {countMessage}
+        </p>
+        {canOrder && isOrderFull && (
+          <p className="border-t border-border bg-surface-warm p-4 font-semibold">{fullMessage}</p>
+        )}
+        {canOrder && !isOrderFull && isRefused && (
+          <p role="alert" className="border-t border-border px-4 pt-3 font-semibold text-danger">
+            {fullMessage}
+          </p>
+        )}
+        {canOrder && !isOrderFull && (
           <div className="flex items-center gap-2.5 border-t border-border bg-surface-warm p-4">
             {/* Two 48px buttons and the number: as narrow as it can be, so the button keeps its words at 360px */}
             <div className="w-31 shrink-0">
@@ -110,7 +138,7 @@ export default function DishDetail({
                 quantity={count}
                 min={1}
                 max={maxQuantity}
-                onChange={setCount}
+                onChange={changeCount}
               />
             </div>
             <Button size="compact" onClick={confirm} className="min-w-0">

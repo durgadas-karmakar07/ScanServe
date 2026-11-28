@@ -1,4 +1,4 @@
-import { LoaderCircle, LogOut, Save } from 'lucide-react';
+import { LoaderCircle, LogOut, QrCode, Save } from 'lucide-react';
 import { useState } from 'react';
 import { logoutEverywhere } from '../../api/auth.js';
 import { updateRestaurant } from '../../api/restaurant.js';
@@ -6,6 +6,7 @@ import Alert from '../../components/ui/Alert.jsx';
 import Button from '../../components/ui/Button.jsx';
 import Card from '../../components/ui/Card.jsx';
 import Input from '../../components/ui/Input.jsx';
+import LinkButton from '../../components/ui/LinkButton.jsx';
 import Sheet from '../../components/ui/Sheet.jsx';
 import Switch from '../../components/ui/Switch.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
@@ -158,6 +159,10 @@ export default function SettingsPage() {
         <p className="text-sm text-text-muted">
           This link cannot be changed, because it is printed on your QR poster.
         </p>
+        <LinkButton to="/owner/qr">
+          <QrCode size={24} aria-hidden="true" />
+          Print QR poster
+        </LinkButton>
       </Card>
 
       <Card className="flex flex-col gap-3">

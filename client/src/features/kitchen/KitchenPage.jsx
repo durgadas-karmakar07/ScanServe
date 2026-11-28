@@ -203,7 +203,7 @@ export default function KitchenPage() {
       <header className="sticky top-0 z-30 border-b border-stone-800 bg-kitchen-bg/95 backdrop-blur">
         <div className="mx-auto flex max-w-[1600px] flex-wrap items-center gap-3 px-4 py-3">
           <Link
-            to="/owner/menu"
+            to="/owner/overview"
             className="flex size-12 shrink-0 items-center justify-center rounded-full text-stone-300 hover:bg-stone-800 focus-visible:outline-2 focus-visible:outline-white"
           >
             <ArrowLeft size={24} aria-hidden="true" />
